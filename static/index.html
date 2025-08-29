@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC Audio Echo and Transcription</title>
+</head>
+
+<body>
+    <h2>WebRTC Аудио-Эхо и Транскрипция</h2>
+
+    <!-- Выбор микрофона -->
+    <label for="micSelect">Выберите микрофон:</label>
+    <select id="micSelect"></select>
+    <br><br>
+
+    <!-- Кнопки управления -->
+    <button id="startButton">Старт</button>
+    <button id="toggleMicButton" disabled>Выключить микрофон</button>
+    <br><br>
+
+    <!-- Воспроизведение удалённого звука -->
+    <audio id="remoteAudio" autoplay controls></audio>
+
+    <script>
+        let pc;
+        let localStream;
+        let currentMicId = null;
+        let micEnabled = true;
+
+        async function loadDevices() {
+            const micSelect = document.getElementById("micSelect");
+            micSelect.innerHTML = "";
+
+            // Сначала получаем доступ к микрофону, чтобы браузер показал все метки
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                console.warn("Доступ к микрофону не предоставлен:", err);
+            }
+
+            const devices = await navigator.mediaDevices.enumerateDevices();
+
+            devices
+                .filter(device => device.kind === "audioinput")
+                .forEach((device, index) => {
+                    const option = document.createElement("option");
+                    option.value = device.deviceId;
+                    option.text = device.label || `Микрофон ${index + 1}`;
+                    micSelect.appendChild(option);
+                });
+
+            if (micSelect.options.length > 0) {
+                currentMicId = micSelect.value;
+            }
+        }
+
+
+
+
+        // Старт WebRTC соединения
+        document.getElementById('startButton').onclick = async function () {
+            const micSelect = document.getElementById("micSelect");
+            currentMicId = micSelect.value;
+
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: currentMicId ? { exact: currentMicId } : undefined,
+                    sampleRate: 16000,
+                    channelCount: 1,
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            pc = new RTCPeerConnection();
+            localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+            pc.ontrack = e => {
+                const remoteAudio = document.getElementById('remoteAudio');
+                remoteAudio.srcObject = e.streams[0];
+            };
+
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            await new Promise(resolve => {
+                if (pc.iceGatheringState === 'complete') {
+                    resolve();
+                } else {
+                    const checkState = () => {
+                        if (pc.iceGatheringState === 'complete') {
+                            pc.removeEventListener('icegatheringstatechange', checkState);
+                            resolve();
+                        }
+                    };
+                    pc.addEventListener('icegatheringstatechange', checkState);
+                }
+            });
+
+            const response = await fetch('/api/stt/offer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type })
+            });
+            const answer = await response.json();
+            await pc.setRemoteDescription(answer);
+
+            document.getElementById("toggleMicButton").disabled = false;
+        };
+
+        // Вкл/Выкл микрофон
+        document.getElementById("toggleMicButton").onclick = function () {
+            if (!localStream) return;
+            micEnabled = !micEnabled;
+            localStream.getAudioTracks().forEach(track => track.enabled = micEnabled);
+            this.textContent = micEnabled ? "Выключить микрофон" : "Включить микрофон";
+        };
+
+        // Загрузка устройств при старте
+        navigator.mediaDevices.addEventListener("devicechange", loadDevices);
+        loadDevices();
+    </script>
+</body>
+
+</html>
