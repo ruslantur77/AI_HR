@@ -8,6 +8,7 @@ from typing import Set
 
 import httpx
 import numpy as np
+import webrtcvad
 import websockets
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
@@ -26,6 +27,10 @@ class AudioProcessor:
         self.resampler = AudioResampler(format="s16", layout="mono", rate=16000)
         self.ws: websockets.ClientConnection | None = None
         self.tts_queue = tts_queue
+        self.vad = webrtcvad.Vad(2)
+        self.silence_frames = 0
+        self.max_silence_frames = 50  # 50 * 20мс = 1 сек тишины → конец utterance
+        self.text_buffer = []  # Буфер для накопления текста
 
     async def connect_gladia(self):
         async with httpx.AsyncClient() as client:
@@ -61,7 +66,7 @@ class AudioProcessor:
             msg = json.loads(message)
             if msg.get("type") == "transcript" and msg.get("data", {}).get("is_final"):
                 text = msg["data"]["utterance"]["text"]
-                logger.info("Transcription: %s", text)
+                self.text_buffer.append(text)
 
     async def _send_chunk(self, chunk: np.ndarray):
         if not self.ws:
@@ -78,6 +83,14 @@ class AudioProcessor:
             )
         )
 
+    def _is_speech(self, chunk: np.ndarray) -> bool:
+        pcm_bytes = chunk.astype(np.int16).tobytes()
+        try:
+            return self.vad.is_speech(pcm_bytes, 16000)
+        except Exception as e:
+            logger.error("VAD error: %s", e)
+            return False
+
     async def process(self, track: MediaStreamTrack):
         while True:
             try:
@@ -86,7 +99,21 @@ class AudioProcessor:
                 for resampled_frame in resampled_frames or []:
                     if resampled_frame:
                         audio_samples = resampled_frame.to_ndarray().flatten()
+
+                        if self._is_speech(audio_samples):
+                            self.silence_frames = 0
+                        else:
+                            self.silence_frames += 1
                         await self._send_chunk(audio_samples)
+
+                        if self.silence_frames > self.max_silence_frames:
+                            if self.text_buffer:
+                                full_text = " ".join(self.text_buffer)
+                                logger.info("Final utterance: %s", full_text)
+
+                                self.text_buffer.clear()
+                            self.silence_frames = 0
+
             except Exception as e:
                 logger.error("Error processing audio frame: %s", e)
                 break
