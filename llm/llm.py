@@ -34,6 +34,7 @@ async def get_response(
         "model": MODEL,
         "messages": messages,
         "stream": False,
+        "max_tokens": 100,
     }
     async with httpx.AsyncClient() as client:
         res = await client.post(URL, headers=HEADERS, json=payload, timeout=60)

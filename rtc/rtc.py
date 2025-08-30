@@ -74,6 +74,8 @@ class AudioProcessor:
     async def _send_chunk(self, chunk: np.ndarray):
         if not self.ws:
             await self.connect_gladia()
+        if self.is_waiting_response.is_set():
+            chunk = np.zeros(320, dtype=np.int16)
         int16_chunk = chunk.astype(np.int16)
         await self.ws.send(  # type: ignore
             json.dumps(
@@ -94,11 +96,23 @@ class AudioProcessor:
             logger.error("VAD error: %s", e)
             return False
 
+    async def send_to_tts(self):
+        if self.text_buffer:
+            self.is_waiting_response.set()
+            full_text = " ".join(self.text_buffer)
+            logger.info("Final utterance: %s", full_text)
+
+            messages, answer = await get_response(self.messages, full_text)
+            self.messages = messages
+            await self.tts_queue.put(answer)
+            await self.tts_queue.join()
+            self.is_waiting_response.clear()
+            self.text_buffer.clear()
+        self.silence_frames = 0
+
     async def process(self, track: MediaStreamTrack):
         while True:
             try:
-                if self.is_waiting_response.is_set():
-                    return
                 frame = await track.recv()
                 resampled_frames = self.resampler.resample(frame)  # type: ignore
                 for resampled_frame in resampled_frames or []:
@@ -111,21 +125,10 @@ class AudioProcessor:
                             self.silence_frames += 1
                         await self._send_chunk(audio_samples)
 
+                        if self.is_waiting_response.is_set():
+                            continue
                         if self.silence_frames > self.max_silence_frames:
-                            if self.text_buffer:
-                                self.is_waiting_response.set()
-                                full_text = " ".join(self.text_buffer)
-                                logger.info("Final utterance: %s", full_text)
-
-                                messages, answer = await get_response(
-                                    self.messages, full_text
-                                )
-                                self.messages = messages
-                                await self.tts_queue.put(answer)
-                                await self.tts_queue.join()
-                                self.is_waiting_response.clear()
-                                self.text_buffer.clear()
-                            self.silence_frames = 0
+                            asyncio.create_task(self.send_to_tts())
 
             except Exception as e:
                 logger.error("Error processing audio frame: %s", e)
@@ -133,11 +136,23 @@ class AudioProcessor:
 
 
 async def synthesize_tts(text: str) -> np.ndarray:
-    # Пример: генерируем numpy int16 аудио 16kHz
-    # Здесь должен быть вызов твоего TTS, возвращающий np.int16
-    audio = np.zeros(16000, dtype=np.int16)  # Замените на реальный TTS
+    # mp3_fp = BytesIO()
+    # await asyncio.to_thread(lambda: gTTS(text, lang="ru").write_to_fp(mp3_fp))
+    # mp3_fp.seek(0)
+    # data, samplerate = sf.read(mp3_fp, dtype="float32")
+
+    # if len(data.shape) > 1:
+    #     data = np.mean(data, axis=1)
+
+    # target_sr = 16000
+    # if samplerate != target_sr:
+    #     data = resample_poly(data, target_sr, samplerate)
+
+    # data_int16 = np.clip(data * 32767, -32768, 32767).astype(np.int16)
     logger.info(f"TTS was syntenized: {text}")
-    return audio
+
+    # return data_int16
+    return np.zeros(16000, dtype=np.int16)
 
 
 class TTSAudioTrack(MediaStreamTrack):
@@ -152,7 +167,6 @@ class TTSAudioTrack(MediaStreamTrack):
         self.start_time = time.time()
 
     async def recv(self):
-        # Если буфер пуст, пробуем получить новый текст
         if self.buffer.size == 0:
             try:
                 text = await asyncio.wait_for(self.tts_queue.get(), timeout=0.001)
