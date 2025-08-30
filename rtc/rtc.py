@@ -15,6 +15,7 @@ from aiortc.contrib.media import MediaRelay
 from av import AudioFrame, AudioResampler
 
 from config import config
+from llm import get_response
 
 logger = logging.getLogger("webrtc")
 
@@ -31,6 +32,8 @@ class AudioProcessor:
         self.silence_frames = 0
         self.max_silence_frames = 50  # 50 * 20мс = 1 сек тишины → конец utterance
         self.text_buffer = []  # Буфер для накопления текста
+        self.is_waiting_response = asyncio.Event()
+        self.messages = []
 
     async def connect_gladia(self):
         async with httpx.AsyncClient() as client:
@@ -94,6 +97,8 @@ class AudioProcessor:
     async def process(self, track: MediaStreamTrack):
         while True:
             try:
+                if self.is_waiting_response.is_set():
+                    return
                 frame = await track.recv()
                 resampled_frames = self.resampler.resample(frame)  # type: ignore
                 for resampled_frame in resampled_frames or []:
@@ -108,9 +113,17 @@ class AudioProcessor:
 
                         if self.silence_frames > self.max_silence_frames:
                             if self.text_buffer:
+                                self.is_waiting_response.set()
                                 full_text = " ".join(self.text_buffer)
                                 logger.info("Final utterance: %s", full_text)
 
+                                messages, answer = await get_response(
+                                    self.messages, full_text
+                                )
+                                self.messages = messages
+                                await self.tts_queue.put(answer)
+                                await self.tts_queue.join()
+                                self.is_waiting_response.clear()
                                 self.text_buffer.clear()
                             self.silence_frames = 0
 
@@ -123,6 +136,7 @@ async def synthesize_tts(text: str) -> np.ndarray:
     # Пример: генерируем numpy int16 аудио 16kHz
     # Здесь должен быть вызов твоего TTS, возвращающий np.int16
     audio = np.zeros(16000, dtype=np.int16)  # Замените на реальный TTS
+    logger.info(f"TTS was syntenized: {text}")
     return audio
 
 
@@ -143,6 +157,7 @@ class TTSAudioTrack(MediaStreamTrack):
             try:
                 text = await asyncio.wait_for(self.tts_queue.get(), timeout=0.001)
                 self.buffer = await synthesize_tts(text)
+                self.tts_queue.task_done()
             except asyncio.TimeoutError:
                 self.buffer = np.zeros(320, dtype=np.int16)
             except Exception as e:
