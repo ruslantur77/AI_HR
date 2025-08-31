@@ -17,7 +17,7 @@ from services import RefreshTokenService, UserService
 SECRET_KEY = config.SECRET_KEY
 
 
-def _generate_token_pair(user_id: int):
+def _generate_token_pair(user_id: UUID, user_role: UserRoleEnum):
     jti = uuid4()
     refresh_token = create_refresh_token(
         data=RefreshTokenData(user_id=user_id, jti=jti),
@@ -25,7 +25,7 @@ def _generate_token_pair(user_id: int):
     )
     refresh_token_hash = get_hash(refresh_token.token)
     access_token = create_access_token(
-        data=AccesTokenData(user_id=user_id),
+        data=AccesTokenData(user_id=user_id, role=user_role),
         kid="default",
     )
     return access_token, refresh_token, refresh_token_hash, jti
@@ -39,14 +39,14 @@ class CreateTokenPairUseCase:
         self.token_service = token_service
         self.user_service = user_service
 
-    async def execute(self, user_id: UUID) -> TokenPair | None:
+    async def execute(self, user_id: UUID, user_role: UserRoleEnum) -> TokenPair | None:
         user = await self.user_service.get(user_id)
 
         if user is None:
             return None
 
         access_token, refresh_token, refresh_token_hash, jti = _generate_token_pair(
-            user.id
+            user.id, user_role
         )
 
         await self.token_service.save(
@@ -80,7 +80,7 @@ class RefreshTokenPairUseCase:
             return None
 
         new_access_token, new_refresh_token, new_refresh_token_hash, jti = (
-            _generate_token_pair(user.id)
+            _generate_token_pair(user.id, user.role)
         )
 
         await self.token_service.revoke_token(token_data.jti)
