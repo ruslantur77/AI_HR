@@ -10,8 +10,8 @@ from config import config
 from schemas import AccesTokenData, RefreshTokenData, UserAuth
 from security import decode_jwt, oauth2_scheme
 from services import (
-    ApplicationService,
     CandidateService,
+    InterviewService,
     RefreshTokenService,
     ResumeService,
     UserService,
@@ -41,12 +41,12 @@ def get_token_service(
     return RefreshTokenService(session_factory)
 
 
-def get_application_service(
+def get_interview_service(
     session_factory: Annotated[
         async_sessionmaker[AsyncSession], Depends(get_async_session_factory)
     ],
-) -> ApplicationService:
-    return ApplicationService(session_factory)
+) -> InterviewService:
+    return InterviewService(session_factory)
 
 
 def get_candidate_service(
