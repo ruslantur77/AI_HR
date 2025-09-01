@@ -8,11 +8,13 @@ from typing import Set
 
 import httpx
 import numpy as np
+import torch
 import webrtcvad
 import websockets
 from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRelay
 from av import AudioFrame, AudioResampler
+from scipy.signal import resample
 
 from config import config
 from llm import get_response
@@ -21,6 +23,13 @@ logger = logging.getLogger("webrtc")
 
 pcs: Set[RTCPeerConnection] = set()
 relay = MediaRelay()
+tts_model, _ = torch.hub.load(
+    repo_or_dir="snakers4/silero-models",
+    model="silero_tts",
+    language="ru",
+    speaker="v4_ru",
+)  # type: ignore
+tts_model.to(torch.device("cuda"))
 
 
 class AudioProcessor:
@@ -104,7 +113,7 @@ class AudioProcessor:
 
             messages, answer = await get_response(self.messages, full_text)
             self.messages = messages
-            await self.tts_queue.put(answer)
+            await self.tts_queue.put(synthesize_tts(answer))
             await self.tts_queue.join()
             self.is_waiting_response.clear()
             self.text_buffer.clear()
@@ -135,24 +144,20 @@ class AudioProcessor:
                 break
 
 
-async def synthesize_tts(text: str) -> np.ndarray:
-    # mp3_fp = BytesIO()
-    # await asyncio.to_thread(lambda: gTTS(text, lang="ru").write_to_fp(mp3_fp))
-    # mp3_fp.seek(0)
-    # data, samplerate = sf.read(mp3_fp, dtype="float32")
+def synthesize_tts(
+    text: str,
+    target_sample_rate: int = 16000,
+) -> np.ndarray:
+    print(text)
+    audio = tts_model.apply_tts(text=text, speaker="xenia", sample_rate=48000)
+    audio_numpy = audio.cpu().numpy().astype("float32")
 
-    # if len(data.shape) > 1:
-    #     data = np.mean(data, axis=1)
+    num_samples = int(len(audio_numpy) * target_sample_rate / 48000)
+    audio_resampled = resample(audio_numpy, num_samples)
 
-    # target_sr = 16000
-    # if samplerate != target_sr:
-    #     data = resample_poly(data, target_sr, samplerate)
+    audio_int16 = (audio_resampled * 32767).clip(-32768, 32767).astype("int16")  # type: ignore
 
-    # data_int16 = np.clip(data * 32767, -32768, 32767).astype(np.int16)
-    logger.info(f"TTS was syntenized: {text}")
-
-    # return data_int16
-    return np.zeros(16000, dtype=np.int16)
+    return audio_int16
 
 
 class TTSAudioTrack(MediaStreamTrack):
@@ -163,15 +168,20 @@ class TTSAudioTrack(MediaStreamTrack):
         self.tts_queue = tts_queue
         self.buffer = np.zeros(0, dtype=np.int16)
         self.last_pts = 0
-        self.tts_queue.put_nowait("")
         self.start_time = time.time()
+        self.tts_started = False
 
     async def recv(self):
         if self.buffer.size == 0:
-            try:
-                text = await asyncio.wait_for(self.tts_queue.get(), timeout=0.001)
-                self.buffer = await synthesize_tts(text)
+            if self.tts_started:
                 self.tts_queue.task_done()
+                self.tts_started = False
+            try:
+                self.buffer = await asyncio.wait_for(
+                    self.tts_queue.get(), timeout=0.001
+                )
+                self.tts_started = True
+
             except asyncio.TimeoutError:
                 self.buffer = np.zeros(320, dtype=np.int16)
             except Exception as e:

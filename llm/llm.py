@@ -10,7 +10,7 @@ HEADERS = {
     "Authorization": f"Bearer {API_KEY}",
     "Content-Type": "application/json",
 }
-SYSTEM_INSTRUCTIONS = "Ты полезный ассистент."
+SYSTEM_INSTRUCTIONS = "Ты полезный ассистент. Отвечаешь в стиле человека без форматирвоания, специальных символов, разметки, кода и так далее. Ответ - 1-2 предложения. Все английские слова ты пишешь на русском. Например Google - 'Гугл', docker - 'докер' "
 MODEL = "deepseek/deepseek-chat-v3.1"
 
 
