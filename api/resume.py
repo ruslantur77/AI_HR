@@ -21,11 +21,9 @@ from dependencies import (
     get_candidate_service,
     get_interview_service,
     get_resume_service,
-    get_vacancy_service,
 )
-from schemas import AccesTokenData, ResumeResponse
-from schemas.candidate import CandidateCreate
-from services import CandidateService, InterviewService, ResumeService, VacancyService
+from schemas import AccesTokenData, CandidateCreate, ResumeResponse
+from services import CandidateService, InterviewService, ResumeService
 from use_cases import ResumeProcessUseCase
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
@@ -38,8 +36,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 async def submit_candidate(
     candidate_service: Annotated[CandidateService, Depends(get_candidate_service)],
     resume_service: Annotated[ResumeService, Depends(get_resume_service)],
-    application_service: Annotated[InterviewService, Depends(get_interview_service)],
-    vacancy_service: Annotated[VacancyService, Depends(get_vacancy_service)],
+    interview_service: Annotated[InterviewService, Depends(get_interview_service)],
     access_token_data: Annotated[AccesTokenData, Depends(get_access_token_data)],
     full_name: str = Form(...),
     email: str = Form(...),
@@ -69,13 +66,11 @@ async def submit_candidate(
     )
 
     resume_process_uc = ResumeProcessUseCase(
-        vacancy_service=vacancy_service,
         resume_service=resume_service,
-        API_KEY=config.OPENROUTER_API_KEY,
+        interview_service=interview_service,
+        api_key=config.OPENROUTER_API_KEY,
     )
-    asyncio.create_task(
-        resume_process_uc.execute(vacancy_id=vacancy_id, resume_id=resume.id)
-    )
+    asyncio.create_task(resume_process_uc.execute(resume_id=resume.id))
 
     return resume
 

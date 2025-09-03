@@ -1,10 +1,14 @@
 import asyncio
 import io
+import logging
 import re
 import tempfile
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from uuid import UUID
 
+import aiosmtplib
 import docx2txt
 import httpx
 import pdfplumber
@@ -13,69 +17,71 @@ from pdf2image import convert_from_bytes
 from PIL import Image
 from striprtf.striprtf import rtf_to_text
 
+from config import config
 from exceptions import NotFoundError
+from resources.prompts import AUTO_SCREENING
 from schemas import AutoScreeningStatusEnum
 from services import ResumeService
-from services.vacancy_service import VacancyService
+from services.interview_service import InterviewService
+
+logger = logging.getLogger(__name__)
 
 
 class ExtractText:
-    def extract_text_from_image(self, file_obj: io.BytesIO) -> str:
-        img = Image.open(file_obj)
-        return pytesseract.image_to_string(img, lang="rus+eng")
+    def _from_image(self, file_obj: io.BytesIO) -> str:
+        return pytesseract.image_to_string(Image.open(file_obj), lang="rus+eng")
 
-    def extract_text_from_pdf(self, file_obj: io.BytesIO) -> str:
-        text = ""
-        with pdfplumber.open(file_obj) as pdf:
-            for page in pdf.pages:
-                txt = page.extract_text()
-                if txt:
-                    text += txt + "\n"
+    def _from_pdf(self, file_obj: io.BytesIO) -> str:
+        text = "".join(
+            (page.extract_text() or "") + "\n"
+            for page in pdfplumber.open(file_obj).pages
+        ).strip()
 
-        if text.strip():
+        if text:
             return text
 
+        # OCR fallback
         images = convert_from_bytes(file_obj.getvalue())
-        ocr_text = []
-        for i, image in enumerate(images, 1):
-            ocr_text.append(
-                f"\n--- Страница {i} ---\n{pytesseract.image_to_string(image, lang='rus+eng')}"
-            )
-        return "".join(ocr_text)
+        return "\n".join(
+            f"--- Страница {i} ---\n{pytesseract.image_to_string(img, lang='rus+eng')}"
+            for i, img in enumerate(images, 1)
+        )
 
-    def extract_text_from_docx(self, file_obj: io.BytesIO) -> str:
+    def _from_docx(self, file_obj: io.BytesIO) -> str:
         with tempfile.NamedTemporaryFile(suffix=".docx") as tmp_file:
             tmp_file.write(file_obj.getbuffer())
             tmp_file.flush()
-            text = docx2txt.process(tmp_file.name)
-        return text
+            return docx2txt.process(tmp_file.name)
 
-    def extract_text_from_rtf(self, file_obj: io.BytesIO) -> str:
-        content = file_obj.read().decode("utf-8", errors="ignore")
-        return rtf_to_text(content)
+    def _from_rtf(self, file_obj: io.BytesIO) -> str:
+        return rtf_to_text(file_obj.read().decode("utf-8", errors="ignore"))
 
-    def extract_text(self, file_obj: io.BytesIO, ext: str) -> str:
-        ext = ext.lower()
-        if ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
-            return self.extract_text_from_image(file_obj)
-        elif ext == ".pdf":
-            return self.extract_text_from_pdf(file_obj)
-        elif ext == ".docx":
-            return self.extract_text_from_docx(file_obj)
-        elif ext == ".rtf":
-            return self.extract_text_from_rtf(file_obj)
-        else:
-            raise ValueError(f"Неподдерживаемый формат: {ext}")
+    _extractors = {
+        ".jpg": _from_image,
+        ".jpeg": _from_image,
+        ".png": _from_image,
+        ".bmp": _from_image,
+        ".tiff": _from_image,
+        ".pdf": _from_pdf,
+        ".docx": _from_docx,
+        ".rtf": _from_rtf,
+    }
 
     def execute(self, file_path: Path) -> str:
-        ext = file_path.suffix.lower()
         if not file_path.exists() or not file_path.is_file():
-            raise FileNotFoundError(f"Файл не найден: {file_path}")
+            logger.error(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        ext = file_path.suffix.lower()
+        if ext not in self._extractors:
+            logger.error(f"Unsupported file format: {ext}")
+            raise ValueError(f"Unsupported file format: {ext}")
 
         with open(file_path, "rb") as f:
             file_obj = io.BytesIO(f.read())
 
-        return re.sub(r"\n+", "\n", self.extract_text(file_obj, ext))
+        text = self._extractors[ext](self, file_obj)
+        return re.sub(r"\n+", "\n", text).strip()
 
 
 class ResumeAnalyzer:
@@ -87,88 +93,116 @@ class ResumeAnalyzer:
         }
 
     def build_payload(self, requirements: str, resume_text: str) -> dict:
-        system_prompt = """
-Ты — AI-ассистент рекрутера. Твоя задача — объективно оценить, соответствует ли резюме кандидата предоставленным \
-требованиям вакансии.
-Инструкция:
- Внимательно изучи ТРЕБОВАНИЯ к вакансии и РЕЗЮМЕ кандидата.
- Проведи детальный анализ по ключевым критериям: опыт работы, ключевые навыки (Hard Skills), знание методологий,\
-    инструментов и технологий, релевантный опыт.
- Основное внимание уделяй содержанию, а не форме составления резюме.
- Сравни каждый ключевой пункт из требований с тем, что указано в резюме.
-Критерий для возврата True (Принять):
-Кандидат имеет подтвержденный опыт работы на аналогичной позиции, соответствующий требуемому уровню.
-В резюме четко видны и совпадают КЛЮЧЕВЫЕ навыки из требований.
-Резюме демонстрирует релевантный опыт решения задач, указанных в обязанностях вакансии.
-Критерий для возврата False (Отклонить):
-Опыт работы отсутствует или значительно меньше требуемого.
-В резюме отсутствует большинство ключевых hard skills из требований.
-Кандидат является специалистом из смежной или другой области без подтвержденного релевантного опыта.
-Важно:
-Не отклоняй кандидата только из-за отсутствия части желательных (Nice to have) навыков.
-Если ключевые требования совпадают, а второстепенные навыки или уровень английского не указаны — это не повод для False.
-Твой ответ должен быть строго одним словом: `True` или `False`. Никаких пояснений, комментариев или форматирования в \
-    ответе быть не должно.
-"""
+
         user_prompt = f"ТРЕБОВАНИЯ:\n{requirements}\n\nРЕЗЮМЕ:\n{resume_text}"
 
         return {
             "model": "deepseek/deepseek-chat-v3.1",
             "messages": [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": AUTO_SCREENING},
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,
         }
 
     async def execute(self, requirements: str, resume_text: str) -> bool:
-        payload = self.build_payload(requirements, resume_text)
         try:
             async with httpx.AsyncClient(timeout=60) as client:
                 response = await client.post(
-                    self.URL, headers=self.HEADERS, json=payload
+                    self.URL,
+                    headers=self.HEADERS,
+                    json=self.build_payload(requirements, resume_text),
                 )
                 response.raise_for_status()
-                data = response.json()
-                return data["choices"][0]["message"]["content"].strip() == "True"
+                content = response.json()["choices"][0]["message"]["content"].strip()
+                return content == "True"
         except httpx.RequestError as e:
-            raise ConnectionError(f"Ошибка запроса к API: {e}")
-        except (KeyError, IndexError):
-            raise ValueError("Неожиданный формат ответа API")
+            logger.error("API reques error", exc_info=e)
+            raise ConnectionError(f"API reques error: {e}")
+        except (KeyError, IndexError) as e:
+            logger.error("Unexpected API response format", exc_info=e)
+            raise ValueError("Unexpected API response format")
+
+
+class EmailSendUseCase:
+    SUBJECT = "Результат автоскрининга резюме"
+
+    MESSAGES = {
+        AutoScreeningStatusEnum.PASSED: (
+            "Вы прошли этап автоскрининга! "
+            "Для прохождения AI HR интервью перейдите по ссылке {link}"
+        ),
+        AutoScreeningStatusEnum.REJECTED: (
+            "К сожалению, вы не прошли этап автоматического скрининга резюме."
+        ),
+    }
+
+    def __init__(self, sender=config.EMAIL_SENDER, password=config.EMAIL_SENDER_PASS):
+        self.sender = sender
+        self.password = password
+
+    async def _send(self, receiver: str, subject: str, body: str):
+        msg = MIMEMultipart()
+        msg["From"], msg["To"], msg["Subject"] = self.sender, receiver, subject
+        msg.attach(MIMEText(body, "plain"))
+
+        await aiosmtplib.send(
+            msg,
+            hostname="smtp.mail.ru",
+            port=587,
+            start_tls=True,
+            username=self.sender,
+            password=self.password,
+        )
+
+    async def execute(
+        self, email: str, result: AutoScreeningStatusEnum, link: str | None = None
+    ):
+        body = self.MESSAGES.get(result)
+        if not body:
+            logger.error("Unexpected AutoScreening status")
+            raise ValueError("Unexpected AutoScreening status")
+        body = body.format(link=link or "")
+        try:
+            await self._send(email, self.SUBJECT, body)
+        except Exception as e:
+            logger.error("Error on sending letter", exc_info=e)
 
 
 class ResumeProcessUseCase:
-
     def __init__(
         self,
-        vacancy_service: VacancyService,
         resume_service: ResumeService,
-        API_KEY: str,
-    ) -> None:
-        self.vacancy_service = vacancy_service
+        interview_service: InterviewService,
+        api_key: str,
+    ):
         self.resume_service = resume_service
-        self.API_KEY = API_KEY
+        self.interview_service = interview_service
+        self.api_key = api_key
 
-    async def execute(self, vacancy_id: UUID, resume_id: UUID) -> None:
+    async def execute(self, resume_id: UUID) -> None:
         resume = await self.resume_service.get(id=resume_id)
         if not resume:
+            logger.error(f"Resume with id {resume_id} not found")
             raise NotFoundError(f"Resume with id {resume_id} not found")
-        file_path = Path(resume.file_path)
-        extract_uc = ExtractText()
 
-        text = await asyncio.to_thread(extract_uc.execute, file_path=file_path)
-
-        vacancy = await self.vacancy_service.get(vacancy_id)
-        if not vacancy:
-            raise NotFoundError(f"Vacancy with id {vacancy_id} not found")
-        requirements = vacancy.description
-
-        analyze_uc = ResumeAnalyzer(API_KEY=self.API_KEY)
-        res = await analyze_uc.execute(requirements=requirements, resume_text=text)
-        if res:
-            new_status = AutoScreeningStatusEnum.PASSED
-        else:
-            new_status = AutoScreeningStatusEnum.REJECTED
-        await self.resume_service.update_auto_screening_status(
-            id=resume_id, status=new_status
+        file_text = await asyncio.to_thread(
+            ExtractText().execute, Path(resume.file_path)
         )
+
+        analyzer = ResumeAnalyzer(self.api_key)
+        passed = await analyzer.execute(resume.vacancy.description, file_text)
+
+        if passed:
+            status = AutoScreeningStatusEnum.PASSED
+            interview = await self.interview_service.create(resume_id=resume.id)
+            link = f"{config.HOST}/interview/{interview.id}"
+        else:
+            status, link = AutoScreeningStatusEnum.REJECTED, None
+
+        await self.resume_service.update_auto_screening_status(
+            id=resume_id, status=status
+        )
+
+        email_uc = EmailSendUseCase()
+        await email_uc.execute(resume.candidate.email, status, link)

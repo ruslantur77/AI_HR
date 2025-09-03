@@ -34,6 +34,7 @@ dependencies = [
     "striprtf>=0.0.29",
     "pytesseract>=0.3.13",
     "docx2txt>=0.9",
+    "aiosmtplib>=4.0.2",
 ]
 
 [dependency-groups]
