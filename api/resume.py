@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 from pathlib import Path
 from typing import Annotated
@@ -14,6 +15,7 @@ from fastapi import (
     status,
 )
 
+from config import config
 from dependencies import (
     get_access_token_data,
     get_candidate_service,
@@ -24,6 +26,7 @@ from dependencies import (
 from schemas import AccesTokenData, ResumeResponse
 from schemas.candidate import CandidateCreate
 from services import CandidateService, InterviewService, ResumeService, VacancyService
+from use_cases import ResumeProcessUseCase
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
@@ -63,6 +66,15 @@ async def submit_candidate(
 
     resume = await resume_service.create(
         candidate_id=candidate.id, vacancy_id=vacancy_id, file_path=str(file_location)
+    )
+
+    resume_process_uc = ResumeProcessUseCase(
+        vacancy_service=vacancy_service,
+        resume_service=resume_service,
+        API_KEY=config.OPENROUTER_API_KEY,
+    )
+    asyncio.create_task(
+        resume_process_uc.execute(vacancy_id=vacancy_id, resume_id=resume.id)
     )
 
     return resume
