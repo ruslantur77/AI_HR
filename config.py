@@ -1,4 +1,14 @@
+from enum import Enum
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class LogLevels(str, Enum):
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 
 class Config(BaseSettings):
@@ -14,6 +24,13 @@ class Config(BaseSettings):
 
     ADMIN_EMAIL: str
     ADMIN_PASSWORD: str
+
+    EMAIL_SENDER: str
+    EMAIL_SENDER_PASS: str
+
+    HOST: str
+
+    LOG_LEVEL: LogLevels
 
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 

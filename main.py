@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,9 +17,10 @@ from config import config
 from database import create_tables
 from exceptions import AppException
 from exceptions_handler import exception_handler
+from logger import setup_logger
 from rtc.rtc import shutdown
 
-logging.basicConfig(level=logging.INFO)
+setup_logger()
 
 
 @asynccontextmanager
