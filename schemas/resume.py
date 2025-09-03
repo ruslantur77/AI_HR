@@ -6,8 +6,6 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .interview import InterviewResponse
-
 
 class AutoScreeningStatusEnum(enum.Enum):
     PENDING = "pending"
@@ -21,8 +19,7 @@ class ResumeCreate(BaseModel):
     file_path: str
 
 
-class ResumeResponse(ResumeCreate):
+class ResumePlain(ResumeCreate):
     id: UUID
     auto_screening_status: AutoScreeningStatusEnum
     created_at: datetime
-    interview: InterviewResponse | None

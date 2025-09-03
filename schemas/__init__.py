@@ -1,8 +1,10 @@
 # flake8: noqa
 
 from .rtc import RTCOffer
-from .candidate import CandidateCreate, CandidateResponse
-from .resume import ResumeCreate, ResumeResponse, AutoScreeningStatusEnum
+from .candidate import CandidateCreate
+from .candidate_resp import CandidateResponse
+from .resume import ResumeCreate, AutoScreeningStatusEnum
+from .resume_resp import ResumeResponse
 from .token import (
     AccesTokenData,
     GeneratedToken,
@@ -10,7 +12,8 @@ from .token import (
     TokenPair,
     TokenResponse,
 )
-from .vacancy import VacancyCreate, VacancyResponse, VacancyStatusEnum
+from .vacancy import VacancyCreate, VacancyStatusEnum
+from .vacancy_resp import VacancyResponse
 from .user import (
     UserBase,
     UserAuth,

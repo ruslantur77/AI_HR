@@ -4,8 +4,6 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .resume import ResumeResponse
-
 
 class VacancyStatusEnum(enum.Enum):
     OPEN = "open"
@@ -17,8 +15,7 @@ class VacancyCreate(BaseModel):
     description: str
 
 
-class VacancyResponse(VacancyCreate):
+class VacancyPlain(VacancyCreate):
     id: UUID
     status: VacancyStatusEnum
     created_at: datetime
-    resumes: list[ResumeResponse]
