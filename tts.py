@@ -12,30 +12,29 @@ tokens_path = hf_hub_download(
     filename="tokens.txt"
 )
 
-# Создаем конфигурацию для TTS
+
 config = sherpa_onnx.OfflineTtsConfig(
     model=sherpa_onnx.OfflineTtsModelConfig(
         vits=sherpa_onnx.OfflineTtsVitsModelConfig(
             model=model_path,
             tokens=tokens_path,
-            data_dir="/tmp/espeak-ng-data",  # путь к данным eSpeak NG
+            data_dir="/tmp/espeak-ng-data", 
         ),
         num_threads=2,
         debug=False,
-        provider="cpu",  # используйте "cuda" если есть GPU
+        provider="cpu", 
     ),
     rule_fsts="",
     max_num_sentences=1,
 )
 
-# Инициализируем TTS
+
 tts = sherpa_onnx.OfflineTts(config)
 
 # Генерируем речь
 text = "Привет, это тестовая фраза на русском языке."
 audio = tts.generate(text, sid=0, speed=1.0)
 
-# Сохраняем в WAV файл
 with wave.open("output.wav", "wb") as f:
     f.setnchannels(1)
     f.setsampwidth(2)  # 16-bit PCM
