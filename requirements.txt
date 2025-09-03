@@ -2,7 +2,15 @@
 #    uv pip compile pyproject.toml --output-file requirements.txt --no-deps
 aiortc==1.13.0
     # via ai-hr (pyproject.toml)
+aiosqlite==0.21.0
+    # via ai-hr (pyproject.toml)
+alembic==1.16.5
+    # via ai-hr (pyproject.toml)
 av==14.4.0
+    # via ai-hr (pyproject.toml)
+cryptography==45.0.7
+    # via ai-hr (pyproject.toml)
+docx2txt==0.9
     # via ai-hr (pyproject.toml)
 fastapi==0.116.1
     # via ai-hr (pyproject.toml)
@@ -14,15 +22,35 @@ numba==0.61.2
     # via ai-hr (pyproject.toml)
 numpy==2.2.6
     # via ai-hr (pyproject.toml)
+passlib==1.7.4
+    # via ai-hr (pyproject.toml)
+pdf2image==1.17.0
+    # via ai-hr (pyproject.toml)
+pdfplumber==0.11.7
+    # via ai-hr (pyproject.toml)
+pillow==11.3.0
+    # via ai-hr (pyproject.toml)
 pydantic==2.11.7
     # via ai-hr (pyproject.toml)
 pydantic-settings==2.10.1
+    # via ai-hr (pyproject.toml)
+pyjwt==2.10.1
+    # via ai-hr (pyproject.toml)
+pytesseract==0.3.13
+    # via ai-hr (pyproject.toml)
+python-multipart==0.0.20
     # via ai-hr (pyproject.toml)
 scipy==1.16.1
     # via ai-hr (pyproject.toml)
 setuptools==80.9.0
     # via ai-hr (pyproject.toml)
+silero==0.4.1
+    # via ai-hr (pyproject.toml)
 soundfile==0.13.1
+    # via ai-hr (pyproject.toml)
+sqlalchemy==2.0.43
+    # via ai-hr (pyproject.toml)
+striprtf==0.0.29
     # via ai-hr (pyproject.toml)
 uvicorn==0.35.0
     # via ai-hr (pyproject.toml)
