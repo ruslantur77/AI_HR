@@ -3,6 +3,10 @@
 :root {
   --font-heading: 'Ubuntu', sans-serif;
   --font-subheading: 'Ubuntu', sans-serif;
+
+  /* ↓↓↓ добавь эти две строки ↓↓↓ */
+  --background-color: rgba(3, 0, 20, 1); /* тот же цвет, что и body */
+  --text-color: #ffffff;                 /* белый текст */
 }
 
 body {
