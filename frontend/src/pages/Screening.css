@@ -82,3 +82,29 @@
   p{
 color: #fff;
   }
+  .mic-select-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.screening__select {
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: none;
+  background: #ede9fe;
+  color: #6d28d9;
+  cursor: pointer;
+}
+
+.screening__btn--refresh {
+  padding: 0.6rem 0.8rem;
+  background: #a78bfa;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
