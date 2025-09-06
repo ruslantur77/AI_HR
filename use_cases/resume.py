@@ -1,5 +1,6 @@
 import asyncio
 import io
+import json
 import logging
 import re
 import tempfile
@@ -19,10 +20,12 @@ from striprtf.striprtf import rtf_to_text
 
 from config import config
 from exceptions import NotFoundError
-from resources.prompts import AUTO_SCREENING
-from schemas import AutoScreeningStatusEnum
-from services import ResumeService
-from services.interview_service import InterviewService
+from llm import get_response, get_system_instruction
+from resources.prompts import AUTO_SCREENING, INTERVIEW, QUESTIONS
+from schemas import (
+    AutoScreeningStatusEnum,
+)
+from services import InterviewQuestionsService, InterviewService, ResumeService
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +105,7 @@ class ResumeAnalyzer:
                 {"role": "system", "content": AUTO_SCREENING},
                 {"role": "user", "content": user_prompt},
             ],
+            "max_tokens": 100,
             "temperature": 0.1,
         }
 
@@ -174,10 +178,12 @@ class ResumeProcessUseCase:
         self,
         resume_service: ResumeService,
         interview_service: InterviewService,
+        question_service: InterviewQuestionsService,
         api_key: str,
     ):
         self.resume_service = resume_service
         self.interview_service = interview_service
+        self.question_service = question_service
         self.api_key = api_key
 
     async def execute(self, resume_id: UUID) -> None:
@@ -196,6 +202,35 @@ class ResumeProcessUseCase:
         if passed:
             status = AutoScreeningStatusEnum.PASSED
             interview = await self.interview_service.create(resume_id=resume.id)
+            q = (
+                await get_response(
+                    [get_system_instruction(QUESTIONS)],
+                    f"""
+                        На основе этих требований к вакансии:
+                        {resume.vacancy.description}
+
+                        И резюме этого кандидата:
+                        {file_text}
+
+                        Сгенерируй 10-15 конкретных вопросов для технического скринингового собеседования.
+                        """, max_tokens=5000
+                )
+            )[1]
+            questions: list[str] = json.loads(q)
+            welcome_text = await get_response(
+                [
+                    get_system_instruction(
+                        INTERVIEW.format(questions="\n".join(questions))
+                    )
+                ],
+                "Здравствуйте!",
+            )
+            await self.question_service.add(
+                interview_id=interview.id,
+                questions=questions,
+                welcome_text=welcome_text[1],
+            )
+
             link = f"{config.HOST}/interview/{interview.id}"
         else:
             status, link = AutoScreeningStatusEnum.REJECTED, None

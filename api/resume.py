@@ -20,10 +20,12 @@ from dependencies import (
     get_access_token_data,
     get_candidate_service,
     get_interview_service,
+    get_questions_service,
     get_resume_service,
 )
 from schemas import AccesTokenData, CandidateCreate, ResumeResponse
 from services import CandidateService, InterviewService, ResumeService
+from services.questions_service import InterviewQuestionsService
 from use_cases import ResumeProcessUseCase
 
 router = APIRouter(prefix="/api/resume", tags=["resume"])
@@ -37,6 +39,9 @@ async def submit_candidate(
     candidate_service: Annotated[CandidateService, Depends(get_candidate_service)],
     resume_service: Annotated[ResumeService, Depends(get_resume_service)],
     interview_service: Annotated[InterviewService, Depends(get_interview_service)],
+    questions_service: Annotated[
+        InterviewQuestionsService, Depends(get_questions_service)
+    ],
     access_token_data: Annotated[AccesTokenData, Depends(get_access_token_data)],
     full_name: str = Form(...),
     email: str = Form(...),
@@ -68,6 +73,7 @@ async def submit_candidate(
     resume_process_uc = ResumeProcessUseCase(
         resume_service=resume_service,
         interview_service=interview_service,
+        question_service=questions_service,
         api_key=config.OPENROUTER_API_KEY,
     )
     asyncio.create_task(resume_process_uc.execute(resume_id=resume.id))
