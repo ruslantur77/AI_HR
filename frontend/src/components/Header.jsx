@@ -11,11 +11,7 @@ export default function Header() {
 
     return (
         <header className="header">
-            <h1
-                className="clickable-title"
-                onClick={handleLogoClick}
-                style={{ cursor: 'pointer' }}
-            >
+            <h1>
                 AI HR
             </h1>
             <div className="logo">
@@ -23,7 +19,6 @@ export default function Header() {
                     className="logo-image"
                     src={logo}
                     alt="Logo"
-                    onClick={handleLogoClick}
                 />
             </div>
         </header>
