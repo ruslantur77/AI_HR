@@ -23,7 +23,7 @@ from dependencies import (
     get_questions_service,
     get_resume_service,
 )
-from schemas import AccesTokenData, CandidateCreate, ResumeResponse
+from schemas import AccesTokenData, ResumeResponse
 from services import CandidateService, InterviewService, ResumeService
 from services.questions_service import InterviewQuestionsService
 from use_cases import ResumeProcessUseCase
@@ -60,11 +60,12 @@ async def submit_candidate(
     with file_location.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    candidate_data = CandidateCreate(full_name=full_name, email=email)
-    candidate = await candidate_service.create(
-        full_name=candidate_data.full_name,
-        email=candidate_data.email,
-    )
+    candidate = await candidate_service.get_by_email(email=email)
+    if not candidate:
+        candidate = await candidate_service.create(
+            full_name=full_name,
+            email=email,
+        )
 
     resume = await resume_service.create(
         candidate_id=candidate.id, vacancy_id=vacancy_id, file_path=str(file_location)
