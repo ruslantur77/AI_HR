@@ -1,22 +1,18 @@
-/* 1. Системная цепочка: Segoe UI → встроенные sans → generic */
 :root {
   --font-heading: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-subheading: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* 2. Цвета (оставляем) */
 :root {
   --background-color: rgba(3, 0, 20, 1);
   --text-color: #ffffff;
 }
 
-/* 3. Глобальные сбросы/наследие */
 body {
   margin: 0;
   background-color: rgba(3, 0, 20, 1);
 }
 
-/* 4. Заголовки и абзацы с нужной жирностью */
 h1 {
   font-family: var(--font-heading);
   font-weight: 700;
