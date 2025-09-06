@@ -4,8 +4,10 @@ import json
 import logging
 import re
 import time
+from datetime import datetime, timezone
 from fractions import Fraction
 from typing import Any, Set
+from uuid import UUID
 
 import httpx
 import numpy as np
@@ -19,7 +21,8 @@ from scipy.signal import resample
 
 from config import config
 from llm import get_response, get_system_instruction
-from resources.prompts import INTERVIEW
+from resources.prompts import INTERVIEW, RESULT
+from services import InterviewService
 
 logger = logging.getLogger("webrtc")
 
@@ -49,8 +52,39 @@ def parse_llm_json(llm_output: str) -> Any:
         return "ошибка("
 
 
+async def set_result(
+    messages: list, interview_service: InterviewService, interview_id: UUID
+):
+    res = parse_llm_json(
+        (
+            await get_response(
+                src_messages=[get_system_instruction(RESULT)],
+                user_text="\n".join(
+                    [f"{i['role']}: {i['content']}" for i in messages[2:]]
+                ),
+                max_tokens=5000,
+            )
+        )[1]
+    )
+    await interview_service.update(
+        id=interview_id,
+        passed_at=datetime.now(timezone.utc),
+        result=res["status"],
+        feedback_hr=res["hr_feedback"],
+        feedback_candidate=res["candidate_feedback"],
+    )
+
+
 class AudioProcessor:
-    def __init__(self, tts_queue: asyncio.Queue, messages: list, pc: RTCPeerConnection):
+
+    def __init__(
+        self,
+        tts_queue: asyncio.Queue,
+        messages: list,
+        pc: RTCPeerConnection,
+        interview_service: InterviewService,
+        interview_id: UUID,
+    ):
         self.resampler = AudioResampler(format="s16", layout="mono", rate=16000)
         self.ws: websockets.ClientConnection | None = None
         self.tts_queue = tts_queue
@@ -61,6 +95,8 @@ class AudioProcessor:
         self.is_waiting_response = asyncio.Event()
         self.messages = [*messages]
         self.pc = pc
+        self.interview_service = interview_service
+        self.interview_id = interview_id
 
     async def connect_gladia(self):
         async with httpx.AsyncClient() as client:
@@ -149,12 +185,22 @@ class AudioProcessor:
                         5000,
                     )
                 )[1]
+                task = None
                 if farewell_text:
                     logger.info("Farewell received: %s", farewell_text)
                     await self.tts_queue.put(synthesize_tts(farewell_text))
+                    task = asyncio.create_task(
+                        set_result(
+                            messages=messages,
+                            interview_service=self.interview_service,
+                            interview_id=self.interview_id,
+                        )
+                    )
                     await self.tts_queue.join()
                 await self.pc.close()
                 pcs.discard(self.pc)
+                if task:
+                    await task
                 return
 
             self.messages = messages
@@ -257,7 +303,12 @@ class TTSAudioTrack(MediaStreamTrack):
 
 
 async def create_peer_connection(
-    offer_sdp: str, offer_type: str, questions: list[str], welcome_text: str
+    offer_sdp: str,
+    offer_type: str,
+    questions: list[str],
+    welcome_text: str,
+    interview_service: InterviewService,
+    interview_id: UUID,
 ) -> dict:
     pc = RTCPeerConnection()
     pcs.add(pc)
@@ -279,6 +330,8 @@ async def create_peer_connection(
             {"role": "hr", "content": welcome_text},
         ],
         pc=pc,
+        interview_service=interview_service,
+        interview_id=interview_id,
     )
 
     @pc.on("track")
