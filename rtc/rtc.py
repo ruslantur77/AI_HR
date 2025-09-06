@@ -2,9 +2,10 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import time
 from fractions import Fraction
-from typing import Set
+from typing import Any, Set
 
 import httpx
 import numpy as np
@@ -33,8 +34,23 @@ tts_model, _ = torch.hub.load(
 tts_model.to(torch.device("cuda"))
 
 
+def parse_llm_json(llm_output: str) -> Any:
+    pattern = r"```(?:json)?\s*(.*?)\s*```"
+    match = re.search(pattern, llm_output, re.DOTALL)
+
+    if match:
+        json_str = match.group(1)
+    else:
+        json_str = llm_output.strip()
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        logger.critical(f"error parsing llm answer {llm_output}", exc_info=e)
+        return "ошибка("
+
+
 class AudioProcessor:
-    def __init__(self, tts_queue: asyncio.Queue, messages: list):
+    def __init__(self, tts_queue: asyncio.Queue, messages: list, pc: RTCPeerConnection):
         self.resampler = AudioResampler(format="s16", layout="mono", rate=16000)
         self.ws: websockets.ClientConnection | None = None
         self.tts_queue = tts_queue
@@ -44,6 +60,7 @@ class AudioProcessor:
         self.text_buffer = []  # Буфер для накопления текста
         self.is_waiting_response = asyncio.Event()
         self.messages = [*messages]
+        self.pc = pc
 
     async def connect_gladia(self):
         async with httpx.AsyncClient() as client:
@@ -106,6 +123,14 @@ class AudioProcessor:
             logger.error("VAD error: %s", e)
             return False
 
+    @staticmethod
+    def is_json(text: str) -> dict | None:
+        try:
+            obj = json.loads(text)
+            return obj
+        except (json.JSONDecodeError, TypeError):
+            return None
+
     async def send_to_tts(self):
         if self.text_buffer:
             self.is_waiting_response.set()
@@ -113,8 +138,27 @@ class AudioProcessor:
             logger.info("Final utterance: %s", full_text)
 
             messages, answer = await get_response(self.messages, full_text, 5000)
+            json_answer: dict = parse_llm_json(answer)
+
+            if not json_answer["continue_interview"]:
+                farewell_text = (
+                    await get_response(
+                        self.messages,
+                        "Сгенерируй текст для прощания с кандидатом, поблагодари его за \
+                              интервью и сообщи, что результат будет позже",
+                        5000,
+                    )
+                )[1]
+                if farewell_text:
+                    logger.info("Farewell received: %s", farewell_text)
+                    await self.tts_queue.put(synthesize_tts(farewell_text))
+                    await self.tts_queue.join()
+                await self.pc.close()
+                pcs.discard(self.pc)
+                return
+
             self.messages = messages
-            await self.tts_queue.put(synthesize_tts(answer))
+            await self.tts_queue.put(synthesize_tts(json_answer["answer"]))
             await self.tts_queue.join()
             self.is_waiting_response.clear()
             self.text_buffer.clear()
@@ -234,6 +278,7 @@ async def create_peer_connection(
             get_system_instruction(INTERVIEW.format(questions="\n".join(questions))),
             {"role": "hr", "content": welcome_text},
         ],
+        pc=pc,
     )
 
     @pc.on("track")
