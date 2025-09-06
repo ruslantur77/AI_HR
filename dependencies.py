@@ -11,6 +11,7 @@ from schemas import AccesTokenData, RefreshTokenData, UserAuth
 from security import decode_jwt, oauth2_scheme
 from services import (
     CandidateService,
+    InterviewQuestionsService,
     InterviewService,
     RefreshTokenService,
     ResumeService,
@@ -47,6 +48,14 @@ def get_interview_service(
     ],
 ) -> InterviewService:
     return InterviewService(session_factory)
+
+
+def get_questions_service(
+    session_factory: Annotated[
+        async_sessionmaker[AsyncSession], Depends(get_async_session_factory)
+    ],
+) -> InterviewQuestionsService:
+    return InterviewQuestionsService(session_factory)
 
 
 def get_candidate_service(

@@ -6,3 +6,4 @@ from .resume_service import ResumeService
 from .token_service import RefreshTokenService
 from .user_service import UserService
 from .vacancy_service import VacancyService
+from .questions_service import InterviewQuestionsService

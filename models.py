@@ -195,3 +195,14 @@ class InterviewOrm(Base):
         self.result = result
         self.feedback_hr = feedback_hr
         self.feedback_candidate = feedback_candidate
+
+
+class InterviewQuestions(Base):
+    __tablename__ = "interview_questions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(), primary_key=True, default=uuid4)
+    interview_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(), ForeignKey("interviews.id"), nullable=False, unique=True
+    )
+    text: Mapped[str] = mapped_column(String)
+    welcome_text: Mapped[str] = mapped_column(String)
