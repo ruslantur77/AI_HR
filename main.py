@@ -27,7 +27,7 @@ setup_logger()
 async def startup_event(app: FastAPI):
     engine = create_async_engine(
         config.DB_URL,
-        echo=True,
+        echo=False,
         pool_size=10,
         max_overflow=20,
         future=True,

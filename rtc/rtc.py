@@ -17,7 +17,8 @@ from av import AudioFrame, AudioResampler
 from scipy.signal import resample
 
 from config import config
-from llm import get_response
+from llm import get_response, get_system_instruction
+from resources.prompts import INTERVIEW
 
 logger = logging.getLogger("webrtc")
 
@@ -33,7 +34,7 @@ tts_model.to(torch.device("cuda"))
 
 
 class AudioProcessor:
-    def __init__(self, tts_queue: asyncio.Queue):
+    def __init__(self, tts_queue: asyncio.Queue, messages: list):
         self.resampler = AudioResampler(format="s16", layout="mono", rate=16000)
         self.ws: websockets.ClientConnection | None = None
         self.tts_queue = tts_queue
@@ -42,7 +43,7 @@ class AudioProcessor:
         self.max_silence_frames = 50  # 50 * 20мс = 1 сек тишины → конец utterance
         self.text_buffer = []  # Буфер для накопления текста
         self.is_waiting_response = asyncio.Event()
-        self.messages = []
+        self.messages = [*messages]
 
     async def connect_gladia(self):
         async with httpx.AsyncClient() as client:
@@ -111,7 +112,7 @@ class AudioProcessor:
             full_text = " ".join(self.text_buffer)
             logger.info("Final utterance: %s", full_text)
 
-            messages, answer = await get_response(self.messages, full_text)
+            messages, answer = await get_response(self.messages, full_text, 5000)
             self.messages = messages
             await self.tts_queue.put(synthesize_tts(answer))
             await self.tts_queue.join()
@@ -168,7 +169,9 @@ class TTSAudioTrack(MediaStreamTrack):
         self.tts_queue = tts_queue
         self.buffer = np.zeros(0, dtype=np.int16)
         self.last_pts = 0
-        self.start_time = time.time()
+        self.sample_rate = 16000
+        self.frame_size = 320
+        self.start_time = None
         self.tts_started = False
 
     async def recv(self):
@@ -181,39 +184,57 @@ class TTSAudioTrack(MediaStreamTrack):
                     self.tts_queue.get(), timeout=0.001
                 )
                 self.tts_started = True
-
             except asyncio.TimeoutError:
-                self.buffer = np.zeros(320, dtype=np.int16)
+                self.buffer = np.zeros(self.frame_size, dtype=np.int16)
             except Exception as e:
                 logger.error("Error in TTS: %s", e)
-                self.buffer = np.zeros(320, dtype=np.int16)
+                self.buffer = np.zeros(self.frame_size, dtype=np.int16)
 
-        frame_data = self.buffer[:320]
-        self.buffer = self.buffer[320:]
+        frame_data = self.buffer[: self.frame_size]
+        self.buffer = self.buffer[self.frame_size :]
 
         frame_data = frame_data[np.newaxis, :]
         frame = AudioFrame.from_ndarray(frame_data, format="s16", layout="mono")
-        frame.sample_rate = 16000
+        frame.sample_rate = self.sample_rate
         frame.pts = self.last_pts
-        frame.time_base = Fraction(1, 16000)
+        frame.time_base = Fraction(1, self.sample_rate)
         self.last_pts += frame.samples
-        expected_time = frame.pts * frame.time_base
+
+        if self.start_time is None:
+            self.start_time = time.time()
+
+        expected_time = frame.pts / self.sample_rate
         now = time.time() - self.start_time
         wait = expected_time - now
         if wait > 0:
             await asyncio.sleep(wait)
+
         return frame
 
 
-async def create_peer_connection(offer_sdp: str, offer_type: str) -> dict:
+async def create_peer_connection(
+    offer_sdp: str, offer_type: str, questions: list[str], welcome_text: str
+) -> dict:
     pc = RTCPeerConnection()
     pcs.add(pc)
     tts_queue = asyncio.Queue()
 
+    async def enqueue_text(text, delay):
+        await asyncio.sleep(delay)
+        await tts_queue.put(synthesize_tts(text))
+
+    asyncio.create_task(enqueue_text(welcome_text, 3))
+
     tts_track = TTSAudioTrack(tts_queue)
     pc.addTrack(tts_track)
 
-    processor = AudioProcessor(tts_queue)
+    processor = AudioProcessor(
+        tts_queue,
+        [
+            get_system_instruction(INTERVIEW.format(questions="\n".join(questions))),
+            {"role": "hr", "content": welcome_text},
+        ],
+    )
 
     @pc.on("track")
     def on_track(track):

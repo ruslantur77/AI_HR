@@ -23,3 +23,18 @@ async def get_interview(
             detail="Interview not found",
         )
     return res
+
+
+@router.get("/{interview_id}/start", response_model=InterviewCandidateResponse)
+async def start_interview(
+    interview_id: UUID,
+    interview_service: InterviewService = Depends(get_interview_service),
+) -> InterviewResponse:
+    res = await interview_service.get(id=interview_id)
+    if not res:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Interview not found",
+        )
+
+    return res

@@ -100,7 +100,7 @@
                 }
             });
 
-            const response = await fetch('/api/stt/offer', {
+            const response = await fetch('/api/interview/rtc/offer/0fe4391d-8cdb-4549-afe7-6a8ce5478c6f', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type })
