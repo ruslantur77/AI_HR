@@ -27,6 +27,7 @@ class InterviewUpdate(BaseModel):
 
 class InterviewResponse(InterviewCreate):
     id: UUID
+    result: InterviewResultEnum
     created_at: datetime
     passed_at: datetime | None
 

@@ -2,12 +2,13 @@ import os
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
 from dependencies import get_interview_service, get_questions_service
 from rtc.rtc import create_peer_connection
 from schemas import RTCOffer
+from schemas.interview import InterviewResultEnum
 from services import InterviewQuestionsService
 from services.interview_service import InterviewService
 
@@ -26,6 +27,13 @@ async def offer(
     ],
     interview_service: Annotated[InterviewService, Depends(get_interview_service)],
 ):
+    interview = await interview_service.get(id=interview_id)
+    if not interview or interview.result != InterviewResultEnum.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Interview is not available",
+        )
+
     questions = await questions_service.get_questions(interview_id)
     welcome_text = await questions_service.get_welcome_text(interview_id)
     answer = await create_peer_connection(
