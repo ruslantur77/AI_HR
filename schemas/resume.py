@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class AutoScreeningStatusEnum(enum.Enum):
     PENDING = "pending"
+    ERROR = "error"
     PASSED = "passed"
     REJECTED = "rejected"
 

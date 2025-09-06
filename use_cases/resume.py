@@ -187,57 +187,64 @@ class ResumeProcessUseCase:
         self.api_key = api_key
 
     async def execute(self, resume_id: UUID) -> None:
-        resume = await self.resume_service.get(id=resume_id)
-        if not resume:
-            logger.error(f"Resume with id {resume_id} not found")
-            raise NotFoundError(f"Resume with id {resume_id} not found")
+        try:
+            resume = await self.resume_service.get(id=resume_id)
+            if not resume:
+                logger.error(f"Resume with id {resume_id} not found")
+                raise NotFoundError(f"Resume with id {resume_id} not found")
 
-        file_text = await asyncio.to_thread(
-            ExtractText().execute, Path(resume.file_path)
-        )
+            file_text = await asyncio.to_thread(
+                ExtractText().execute, Path(resume.file_path)
+            )
 
-        analyzer = ResumeAnalyzer(self.api_key)
-        passed = await analyzer.execute(resume.vacancy.description, file_text)
+            analyzer = ResumeAnalyzer(self.api_key)
+            passed = await analyzer.execute(resume.vacancy.description, file_text)
 
-        if passed:
-            status = AutoScreeningStatusEnum.PASSED
-            interview = await self.interview_service.create(resume_id=resume.id)
-            q = (
-                await get_response(
-                    [get_system_instruction(QUESTIONS)],
-                    f"""
-                        На основе этих требований к вакансии:
-                        {resume.vacancy.description}
+            if passed:
+                status = AutoScreeningStatusEnum.PASSED
+                interview = await self.interview_service.create(resume_id=resume.id)
+                q = (
+                    await get_response(
+                        [get_system_instruction(QUESTIONS)],
+                        f"""
+                            На основе этих требований к вакансии:
+                            {resume.vacancy.description}
 
-                        И резюме этого кандидата:
-                        {file_text}
+                            И резюме этого кандидата:
+                            {file_text}
 
-                        Сгенерируй 10-15 конкретных вопросов для технического скринингового собеседования.
-                        """, max_tokens=5000
-                )
-            )[1]
-            questions: list[str] = json.loads(q)
-            welcome_text = await get_response(
-                [
-                    get_system_instruction(
-                        INTERVIEW.format(questions="\n".join(questions))
+                            Сгенерируй 5 конкретных вопросов для технического скринингового собеседования.
+                            """,
+                        max_tokens=5000,
                     )
-                ],
-                "Здравствуйте!",
+                )[1]
+                questions: list[str] = json.loads(q)
+                welcome_text = await get_response(
+                    [
+                        get_system_instruction(
+                            INTERVIEW.format(questions="\n".join(questions))
+                        )
+                    ],
+                    "Здравствуйте!",
+                )
+                await self.question_service.add(
+                    interview_id=interview.id,
+                    questions=questions,
+                    welcome_text=welcome_text[1],
+                )
+
+                link = f"{config.HOST}/interview/{interview.id}"
+            else:
+                status, link = AutoScreeningStatusEnum.REJECTED, None
+
+            await self.resume_service.update_auto_screening_status(
+                id=resume_id, status=status
             )
-            await self.question_service.add(
-                interview_id=interview.id,
-                questions=questions,
-                welcome_text=welcome_text[1],
+
+            email_uc = EmailSendUseCase()
+            await email_uc.execute(resume.candidate.email, status, link)
+        except Exception as e:
+            logger.error(f"Error on processing resume {resume_id}", exc_info=e)
+            await self.resume_service.update_auto_screening_status(
+                resume_id, AutoScreeningStatusEnum.ERROR
             )
-
-            link = f"{config.HOST}/interview/{interview.id}"
-        else:
-            status, link = AutoScreeningStatusEnum.REJECTED, None
-
-        await self.resume_service.update_auto_screening_status(
-            id=resume_id, status=status
-        )
-
-        email_uc = EmailSendUseCase()
-        await email_uc.execute(resume.candidate.email, status, link)
