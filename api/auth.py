@@ -65,6 +65,11 @@ async def register(
     return res
 
 
+@router.options("/login")
+async def login_options():
+    return Response(status_code=200)
+
+
 @router.post("/login")
 async def login(
     response: Response,
