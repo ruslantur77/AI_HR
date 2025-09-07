@@ -128,7 +128,7 @@ class ResumeOrm(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(), primary_key=True, default=uuid4)
     candidate_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(), ForeignKey("candidates.id"), nullable=False, unique=True
+        UUID(), ForeignKey("candidates.id"), nullable=False, unique=False
     )
     vacancy_id: Mapped[uuid.UUID] = mapped_column(
         UUID(), ForeignKey("vacancies.id"), nullable=False

@@ -108,7 +108,6 @@ def upgrade() -> None:
             ["vacancies.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("candidate_id"),
     )
     op.create_table(
         "interviews",
