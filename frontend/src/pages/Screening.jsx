@@ -58,7 +58,7 @@ if (remoteAudio.current?.srcObject) {
     return () => stopEverything();
   }, []);
 
-  /* ---------- обновление списка микрофонов ---------- */
+  /* ---------- обновление списка микрофонов ----- */
   const refreshMics = async () => {
     // запрашиваем разрешение, если ещё не было
     await navigator.mediaDevices.getUserMedia({ audio: true });
