@@ -74,9 +74,41 @@ export default function VacancyDetail() {
   //   };
   //   setTimeout(() => { setVacancy(fakeDB[id] || null); setLoading(false); }, 300);
   // }, [id]);
-  const downloadResume = (file_path) => {
-    if (!file_path) return alert('Файл не загружен');
-    window.open(`${import.meta.env.VITE_API_URL}${file_path}`, '_blank');
+  const downloadResume = async (resume_id) => {
+    if (!resume_id) return alert('Файл не загружен');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/resume/${resume_id}/download`, {
+        responseType: 'blob',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      const disposition = response.headers['content-disposition'];
+      let fileName = 'resume.pdf';
+      if (disposition) {
+        const match = disposition.match(/filename="?(.+)"?/);
+        if (match?.[1]) {
+          fileName = match[1];
+        }
+      }
+
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Не удалось скачать файл');
+    }
   };
 
   const handleChange = (e) => {
@@ -150,7 +182,7 @@ export default function VacancyDetail() {
                       <div className="vacancy-detail__btns">
                         <button
                           className="vacancy-detail__btn-resume"
-                          onClick={() => downloadResume(r.file_path)}
+                          onClick={() => downloadResume(r.id)}
                         >
                           ⬇ Резюме
                         </button>
