@@ -1,3 +1,4 @@
+/* ====== Старые классы (без изменений) ====== */
 .vacancy-detail {
   min-height: calc(100vh - 80px);
   padding: 2rem;
@@ -41,16 +42,47 @@
   gap: 0.75rem;
 }
 
+/* ====== Новые / изменённые классы ====== */
 .vacancy-detail__item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column; /* две строки */
+  gap: 0.5rem;
   padding: 0.9rem 1rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* строка 1: ФИО + кнопка */
+.vacancy-detail__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* кнопка «⬇ Резюме» */
+.vacancy-detail__btn-resume {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 8px;
+  background: #a78bfa;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.vacancy-detail__btn-resume:hover {
+  transform: translateY(-1px);
+}
+
+/* блок с двумя статусами */
+.vacancy-detail__statuses {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* цветные бейджики */
 .status {
   padding: 0.25rem 0.6rem;
   border-radius: 8px;
@@ -60,3 +92,4 @@
 .status--pending { background: #f59e0b; }
 .status--passed  { background: #22c55e; }
 .status--rejected{ background: #ef4444; }
+.status--none    { background: #6b7280; opacity: 0.7; }
