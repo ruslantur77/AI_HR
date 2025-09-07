@@ -14,6 +14,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 
 from config import config
 from dependencies import (
@@ -100,3 +101,30 @@ async def get_resumes(
 ):
     res = await resume_service.get_by_vacancy_id(id=vacancy_id)
     return res
+
+
+@router.get("/{resume_id}/download")
+async def download_resume(
+    resume_id: UUID,
+    resume_service: Annotated[ResumeService, Depends(get_resume_service)],
+    access_token_data: Annotated[AccesTokenData, Depends(get_access_token_data)],
+):
+    resume = await resume_service.get(id=resume_id)
+    if not resume or not resume.file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found",
+        )
+
+    file_path = Path(resume.file_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume file not found on server",
+        )
+
+    return FileResponse(
+        path=file_path,
+        filename=file_path.name,
+        media_type="application/octet-stream",
+    )
