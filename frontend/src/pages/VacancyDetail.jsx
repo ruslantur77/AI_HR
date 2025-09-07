@@ -1,19 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../api/axios';
 import Header from '../components/Header';
 import './VacancyDetail.css';
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 export default function VacancyDetail() {
   const { id } = useParams();
   const [vacancy, setVacancy] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  /* ---------- реальный запрос ---------- */
+  // useEffect(() => {
+  //   axios
+  //     .get(`/api/vacancy/${id}`)
+  //     .then(({ data }) => setVacancy(data))
+  //     .catch(err => {
+  //       console.error(err);
+  //       setError('Не удалось загрузить вакансию');
+  //     })
+  //     .finally(() => setLoading(false));
+  // }, [id]);
+
+  /* ---------- заглушка (закомментирована) ---------- */
 
   useEffect(() => {
-    const fakeDB = {
-    '1': {
+    const fakeDB = { 
+   '1': {
       id: '1',
       title: 'Junior Frontend Developer',
       description: 'Ищем начинающего разработчика с знанием React и базовым опытом TypeScript. Удалёнка, гибкий график.',
@@ -51,19 +64,31 @@ export default function VacancyDetail() {
       status: 'closed',
       resumes: [],
     },
-  };
-
-  setTimeout(() => {
-    const vacancy = fakeDB[id] || null;
-    setVacancy(vacancy);
-    setLoading(false);
-  }, 300);
-    // axios
-    //   .get(`${API_URL}/api/vacancy/${id}`)
-    //   .then(r => setVacancy(r.data))
-    //   .finally(() => setLoading(false));
+     };
+    setTimeout(() => { setVacancy(fakeDB[id] || null); setLoading(false); }, 300);
   }, [id]);
 
+
+  /* ---------- вспомогательные функции ---------- */
+  const downloadResume = (file_path) => {
+    if (!file_path) return alert('Файл не загружен');
+    window.open(`${import.meta.env.VITE_API_URL}${file_path}`, '_blank');
+  };
+
+  const createInterview = async (resumeId) => {
+    try {
+      // ЗАМЕНИТЕ на реальный вызов когда бэк добавит ручку
+      alert(`POST /api/resume/${resumeId}/start – пока заглушка`);
+      // Пример:
+      // const { data } = await axios.post(`/api/resume/${resumeId}/start`);
+      // обновляем vacancy чтобы кнопка стала disabled
+      // setVacancy(prev => ({...prev, resumes: prev.resumes.map(r => r.id === resumeId ? {...r, interview: data} : r)}));
+    } catch (e) {
+      alert('Ошибка при создании собеседования');
+    }
+  };
+
+  /* ---------- рендер ---------- */
   return (
     <>
       <Header />
@@ -76,16 +101,49 @@ export default function VacancyDetail() {
             <p className="vacancy-detail__desc">{vacancy.description}</p>
 
             <h2 className="vacancy-detail__subtitle">Кандидаты</h2>
+
             {vacancy.resumes?.length ? (
               <ul className="vacancy-detail__list">
-                {vacancy.resumes.map(r => (
+                {vacancy.resumes.map((r) => (
                   <li key={r.id} className="vacancy-detail__item">
-                    <span>
-                      {r.candidate.full_name} ({r.candidate.email})
-                    </span>
-                    <span className={`status status--${r.auto_screening_status}`}>
-                      {r.auto_screening_status}
-                    </span>
+                    {/* строка 1: ФИО + кнопки */}
+                    <div className="vacancy-detail__row vacancy-detail__actions">
+                      <span className="vacancy-detail__fio">
+                        {r.candidate.full_name} ({r.candidate.email})
+                      </span>
+
+                      <div className="vacancy-detail__btns">
+                        <button
+                          className="vacancy-detail__btn-resume"
+                          onClick={() => downloadResume(r.file_path)}
+                        >
+                          ⬇ Резюме
+                        </button>
+
+                        <button
+                          className="vacancy-detail__btn-interview"
+                          onClick={() => createInterview(r.id)}
+                          disabled={!!r.interview}
+                        >
+                          {r.interview ? 'Интервью создано' : 'Создать собеседование'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* строка 2: статусы */}
+                    <div className="vacancy-detail__row">
+                      <span className={`status status--${r.auto_screening_status}`}>
+                        Авто-скрининг: {r.auto_screening_status}
+                      </span>
+
+                      {r.interview ? (
+                        <span className={`status status--${r.interview.result}`}>
+                          Собеседование: {r.interview.result}
+                        </span>
+                      ) : (
+                        <span className="status status--none">Собеседование: —</span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -94,7 +152,7 @@ export default function VacancyDetail() {
             )}
           </div>
         ) : (
-          <p>Не удалось загрузить вакансию</p>
+          <p>{error || 'Вакансия не найдена'}</p>
         )}
       </main>
     </>
