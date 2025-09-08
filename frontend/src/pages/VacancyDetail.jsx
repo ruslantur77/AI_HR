@@ -11,6 +11,14 @@ export default function VacancyDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [aiText, setAiText] = useState('');   // текст для модалки
+  const [showAi, setShowAi] = useState(false); // видимость модалки
+
+  const openAiFeedback = (feedback) => {
+  setAiText(feedback || '—');
+  setShowAi(true);
+  };
+
   const [showForm, setShowForm] = useState(false);
   const [candidateData, setCandidateData] = useState({
     full_name: '',
@@ -176,15 +184,26 @@ export default function VacancyDetail() {
                       <span className="vacancy-detail__fio">
                         {r.candidate.full_name} ({r.candidate.email})
                       </span>
+                      
                       <div className="vacancy-detail__btns">
-                        <button
-                          className="vacancy-detail__btn-resume"
-                          onClick={() => downloadResume(r.id)}
-                        >
-                          ⬇ Резюме
-                        </button>
-                      </div>
+                      <button
+                        className="vacancy-detail__btn-resume"
+                        onClick={() => downloadResume(r.id)}
+                      >
+                        ⬇ Резюме
+                      </button>
+                      <button
+                        className="vacancy-detail__btn-ai"
+                        onClick={() => openAiFeedback(r.interview?.feedback_candidate)}
+                        disabled={!r.interview?.feedback_candidate}
+                        title={!r.interview?.feedback_candidate ? 'Отзыв пока не сформирован' : ''}
+                      >
+                        Итог AI
+                      </button>
                     </div>
+                      
+                    </div>
+
                     <div className="vacancy-detail__row">
                       <span className={`status status--${r.auto_screening_status}`}>
                         Авто-скрининг: {r.auto_screening_status}
@@ -283,8 +302,19 @@ export default function VacancyDetail() {
                   </form>
                 </div>
               </div>
+              
+            )}
+            {showAi && (
+              <div className="modal-overlay" onClick={() => setShowAi(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                  <h3>Итог AI HR</h3>
+                  <pre className="ai-feedback">{aiText}</pre>
+                  <button className="btn-close" onClick={() => setShowAi(false)}>Закрыть</button>
+                </div>
+              </div>
             )}
           </div>
+          
         ) : (
           <p>{error || 'Вакансия не найдена'}</p>
         )}
