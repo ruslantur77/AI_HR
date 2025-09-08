@@ -1,14 +1,13 @@
-// src/pages/Result.jsx
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from '../api/axios';
 import './Result.css';
 
 export default function Result() {
-  const { state } = useLocation();          // { interviewId: '...' }
+  const { state } = useLocation();         
   const interviewId = state?.interviewId;
 
-  const [feedback, setFeedback] = useState(null); // строка или null
+  const [feedback, setFeedback] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 

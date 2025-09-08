@@ -6,7 +6,7 @@ function App() {
   return (
     <>
       <Header />
-      <Outlet /> {/* ← сюда рендерятся дочерние маршруты */}
+      <Outlet />
     </>
   );
 }

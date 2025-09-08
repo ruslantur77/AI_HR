@@ -27,7 +27,6 @@ export default function Login() {
       axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
       navigate('/vacancies');
     } catch (err) {
-      // 422 – валидация, остальное – "неверный логин/пароль"
       const msg =
         err.response?.status === 422
           ? err.response.data.detail.map(d => d.msg).join(', ')

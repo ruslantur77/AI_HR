@@ -4,9 +4,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Header() {
   const navigate = useNavigate();
-  const { pathname, search } = useLocation();   // ← берём и query
+  const { pathname, search } = useLocation();   
 
-  const isPureHome = pathname === '/' && !search; // строго / без ?...
+  const isPureHome = pathname === '/' && !search; 
   const isVacancyPage = pathname.startsWith('/vacancies');
   const isResultPage = pathname.startsWith('/result');
 
@@ -26,7 +26,6 @@ export default function Header() {
         AI HR
       </h1>
 
-      {/* кнопка ТОЛЬКО на чистом / */}
       {isPureHome && (
         <button className="header__hr-btn" onClick={() => navigate('/login')}>
           Вход для HR

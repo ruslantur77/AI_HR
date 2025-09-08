@@ -9,7 +9,7 @@ export default function Vacancies() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // /* ---------- заглушка (закомментирована) ---------- */
+/* ---------- заглушка ---------- */
   useEffect(() => {
     setTimeout(() => {
       setList([
@@ -40,7 +40,6 @@ export default function Vacancies() {
 
     try {
       await axios.post('/api/vacancy/', { title, description: desc });
-      // обновляем список
       const { data } = await axios.get('/api/vacancy/');
       setList(data);
     } catch (e) {
@@ -73,7 +72,6 @@ export default function Vacancies() {
             <p>Пока нет вакансий</p>
           )}
 
-          {/* кнопка «+ Новая вакансия» (по желанию) */}
           <button className="vacancies__add-btn" onClick={createVacancy}>
             + Новая вакансия
           </button>

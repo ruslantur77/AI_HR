@@ -1,16 +1,13 @@
-/* 1. Контейнер на весь остаток высоты экрана */
 .home {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: calc(100vh - 80px);
-  /* вычитаем высоту хедера ≈80px */
   padding: 2rem;
   box-sizing: border-box;
 }
 
-/* 2. Заголовок */
 .home__title {
   font-family: var(--font-heading);
   font-size: clamp(2rem, 5vw, 3.5rem);
@@ -20,7 +17,6 @@
   font-weight: 500;
 }
 
-/* 3. Кнопка с анимированным градиентом */
 .home__record-btn {
   position: relative;
   border: none;
@@ -40,8 +36,6 @@
   transform: scale(1.05);
 }
 
-
-/* 4. Анимация переливания */
 .home__finished {
   text-align: center;
 }

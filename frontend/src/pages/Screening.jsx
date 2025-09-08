@@ -1,7 +1,6 @@
-// src/pages/Screening.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from '../api/axios';          // ваш инстанс с токеном / baseURL
+import axios from '../api/axios';        
 import './Screening.css';
 
 export default function Screening() {
@@ -54,9 +53,9 @@ export default function Screening() {
           console.log('Connection state changed:', pc.connectionState);
           if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
             console.log('WebRTC соединение завершено');
-            stopEverything();  // останавливаем локальные треки
+            stopEverything(); 
             setStatus('idle');
-            navigate(`/?interview_id=${interviewId}`);  // редирект с текущим ID
+            navigate(`/?interview_id=${interviewId}`); 
           }
         };
         pc.addEventListener('connectionstatechange', handleConnectionStateChange);
