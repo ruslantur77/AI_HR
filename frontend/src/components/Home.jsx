@@ -12,13 +12,18 @@ const RESULT_LABEL = {
 
 export default function Home() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('checking'); // checking | ok | error | finished
-  const [resultText, setResultText] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const interviewId = searchParams.get('interview_id');
 
   useEffect(() => {
     if (!interviewId) return setStatus('ok');
+    if (!interviewId) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
 
     axios
       .get(`/api/interview/${interviewId}`)
@@ -26,15 +31,16 @@ export default function Home() {
         if (data.result !== 'pending') {
           // формируем красивый текст
           const label = RESULT_LABEL[data.result] || data.result;
-          const feedback = data.feedback_candidate
-            ? ` Комментарий: ${data.feedback_candidate}`
+          const feedback_data = data.feedback_candidate
+            ? `Комментарий: ${data.feedback_candidate}`
             : '';
-          setResultText(`Результат: ${label}.${feedback}`);
+          setFeedback(`Результат: ${label}\n${feedback_data}`);
           return setStatus('finished');
         }
         setStatus('ok');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => setStatus('error')).finally(() => setLoading(false));
+
   }, [interviewId]);
 
   if (status === 'checking')
@@ -43,11 +49,23 @@ export default function Home() {
     return <p className="home__msg">Неверная или просроченная ссылка</p>;
   if (status === 'finished')
     return (
-      <div className="home__finished">
-        <p className="home__msg">Вы уже проходили собеседование.</p>
-        <p className="home__result">{resultText}</p>
-      </div>
+      <>
+        {loading ? (
+          <p className="loading-text">Идёт обработка вашего ответа...</p>
+        ) : (
+          <main className="result">
+            <div className="result__card">
+              <h1 className="result__title">Собеседование окончено</h1>
+              <div className="result__block">
+                <h2 className="result__label">Комментарий AI HR:</h2>
+                <p className="result__feedback">{feedback || '—'}</p>
+              </div>
+            </div>
+          </main>
+        )}
+      </>
     );
+
 
   return (
     <main className="home">
