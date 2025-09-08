@@ -2,6 +2,8 @@
 #    uv pip compile pyproject.toml --output-file requirements.txt --no-deps
 aiortc==1.13.0
     # via ai-hr (pyproject.toml)
+aiosmtplib==4.0.2
+    # via ai-hr (pyproject.toml)
 aiosqlite==0.21.0
     # via ai-hr (pyproject.toml)
 alembic==1.16.5
@@ -58,3 +60,5 @@ webrtcvad==2.0.10
     # via ai-hr (pyproject.toml)
 websockets==15.0.1
     # via ai-hr (pyproject.toml)
+
+pydantic[email]
