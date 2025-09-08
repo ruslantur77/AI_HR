@@ -11,16 +11,16 @@ export default function Vacancies() {
   const navigate = useNavigate();
 
   // /* ---------- заглушка (закомментирована) ---------- */
-  // useEffect(() => {
-  //   setTimeout(() => {
-  //     setList([
-  //       { id: '1', title: 'Junior Frontend Developer', status: 'open' },
-  //       { id: '2', title: 'Middle Backend (FastAPI)', status: 'open' },
-  //       { id: '3', title: 'Senior DevOps', status: 'closed' },
-  //     ]);
-  //     setLoading(false);
-  //   }, 500);
-  // }, []);
+  useEffect(() => {
+    setTimeout(() => {
+      setList([
+        { id: '1', title: 'Junior Frontend Developer', status: 'open' },
+        { id: '2', title: 'Middle Backend (FastAPI)', status: 'open' },
+        { id: '3', title: 'Senior DevOps', status: 'closed' },
+      ]);
+      setLoading(false);
+    }, 500);
+  }, []);
 
   useEffect(() => {
     axios
