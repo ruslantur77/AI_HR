@@ -5,7 +5,7 @@ import axios from '../api/axios';          // ваш инстанс с токе�
 import './Screening.css';
 
 export default function Screening() {
-  const { interviewId } = useParams();      // ← из /screening/:interviewId
+  const { interviewId } = useParams();
   const [mic, setMic] = useState(true);
   const [status, setStatus] = useState('idle');
   const [mics, setMics] = useState([]);
@@ -34,39 +34,61 @@ export default function Screening() {
   };
 
   /* ---------- инициализация WebRTC ---------- */
+  const didConnect = useRef(false);
+
   useEffect(() => {
-    if (!interviewId) {
-      setStatus('error');
-      return;
-    }
+    if (!interviewId || didConnect.current) return;
+    didConnect.current = true;
 
     (async () => {
       setStatus('connecting');
       try {
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false }
-        });
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false } });
         stream.getTracks().forEach(tr => pc.addTrack(tr, stream));
 
-        await new Promise(res => {
-          if (pc.iceGatheringState === 'complete') res();
-          else pc.addEventListener('icegatheringstatechange', () => pc.iceGatheringState === 'complete' && res());
+        const handleConnectionStateChange = () => {
+          const pc = pcRef.current;
+          if (!pc) return;
+
+          console.log('Connection state changed:', pc.connectionState);
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+            console.log('WebRTC соединение завершено');
+            stopEverything();  // останавливаем локальные треки
+            setStatus('idle');
+            navigate(`/?interview_id=${interviewId}`);  // редирект с текущим ID
+          }
+        };
+        pc.addEventListener('connectionstatechange', handleConnectionStateChange);
+
+        await new Promise((resolve) => {
+          const timeout = setTimeout(resolve, 5000);
+          const checkState = () => {
+            if (pc.iceGatheringState === 'complete') {
+              clearTimeout(timeout);
+              pc.removeEventListener('icegatheringstatechange', checkState);
+              resolve();
+            }
+          };
+          pc.addEventListener('icegatheringstatechange', checkState);
+          checkState();
         });
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        /* ---- новый энд-поинт из OpenAPI ---- */
-        const { data } = await axios.post(
-          `/api/interview/rtc/offer/${interviewId}`,
-          { sdp: offer.sdp, type: offer.type }
-        );
+        const { data } = await axios.post(`/api/interview/rtc/offer/${interviewId}`, {
+          sdp: offer.sdp,
+          type: offer.type
+        });
+        console.log('Ответ сервера:', data);
 
-        await pc.setRemoteDescription(data);
+        await pc.setRemoteDescription({ type: data.type, sdp: data.sdp });
+
+        if (remoteAudio.current) {
+          remoteAudio.current.srcObject = pc.getRemoteStreams()[0] || null;
+          remoteAudio.current.play().catch(err => console.warn(err));
+        }
 
         pcRef.current = pc;
         streamRef.current = stream;
@@ -74,7 +96,14 @@ export default function Screening() {
         const audioTrack = stream.getAudioTracks()[0];
         if (audioTrack) setMic(audioTrack.enabled);
 
-        pc.ontrack = e => { remoteAudio.current.srcObject = e.streams[0]; };
+        pc.ontrack = e => {
+          console.log('Получен трек', e.streams[0].getTracks());
+          remoteAudio.current.srcObject = e.streams[0];
+          remoteAudio.current.play()
+            .then(() => console.log('Аудио воспроизводится'))
+            .catch(err => console.warn('Ошибка воспроизведения аудио:', err));
+        };
+
         setStatus('active');
       } catch (e) {
         console.error('Ошибка установления соединения:', e);
@@ -136,7 +165,7 @@ export default function Screening() {
   /* ---------- завершить звонок ---------- */
   const hangUp = () => {
     stopEverything();
-    navigate('/result');
+    navigate(`/?interview_id=${interviewId}`);
   };
 
   /* ---------- визуализация уровня ---------- */
@@ -165,7 +194,7 @@ export default function Screening() {
       <main className="screening">
         <div className="screening__card">
           <div className="screening__sphere" id="aiSphere" />
-          <audio ref={remoteAudio} autoPlay style={{ display: 'none' }} />
+          <audio ref={remoteAudio} autoPlay style={{ visibility: "hidden" }} />
 
           <div className="screening__controls">
             {/* выбор микрофона */}

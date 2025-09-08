@@ -136,7 +136,6 @@ export default function VacancyDetail() {
       await axios.post(`/api/resume`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      alert('Кандидат успешно добавлен');
       setShowForm(false);
       setCandidateData({ full_name: '', email: '', file: null });
       const { data } = await axios.get(`/api/vacancy/${id}`);
@@ -237,41 +236,41 @@ export default function VacancyDetail() {
                         required
                       />
                     </label>
-                   <label>
-                    Резюме:
-                    <input
-                      style={{ visibility: 'hidden' }}
-                      type="file"
-                      name="file"
-                      onChange={handleChange}
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.rtf"
-                      required
-                    />
-                    <div
-                      className="drop-area"
-                      onClick={(e) => e.currentTarget.previousElementSibling.click()}
-                    >
-                      <svg className="upload-icon" viewBox="0 0 24 24">
-                        <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2v-2h14v2H5z" />
-                      </svg>
+                    <label>
+                      Резюме:
+                      <input
+                        style={{ visibility: 'hidden' }}
+                        type="file"
+                        name="file"
+                        onChange={handleChange}
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.rtf"
+                        required
+                      />
+                      <div
+                        className="drop-area"
+                        onClick={(e) => e.currentTarget.previousElementSibling.click()}
+                      >
+                        <svg className="upload-icon" viewBox="0 0 24 24">
+                          <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2v-2h14v2H5z" />
+                        </svg>
 
-                      {/* до выбора */}
-                      {!candidateData.file && (
-                        <>
-                          <span className="drop-title">Перетащите файл сюда</span>
-                          <span className="drop-hint">или нажмите для выбора</span>
-                          <span className="drop-formats">PDF, DOC, DOCX, PNG, JPG, RTF</span>
-                        </>
-                      )}
+                        {/* до выбора */}
+                        {!candidateData.file && (
+                          <>
+                            <span className="drop-title">Перетащите файл сюда</span>
+                            <span className="drop-hint">или нажмите для выбора</span>
+                            <span className="drop-formats">PDF, DOC, DOCX, PNG, JPG, RTF</span>
+                          </>
+                        )}
 
-                      {/* после выбора */}
-                      {candidateData.file && (
-                        <>
-                          <span className="drop-title">Файл выбран</span>
-                          <span className="drop-hint">{candidateData.file.name}</span>
-                        </>
-                      )}
-                    </div>
+                        {/* после выбора */}
+                        {candidateData.file && (
+                          <>
+                            <span className="drop-title">Файл выбран</span>
+                            <span className="drop-hint">{candidateData.file.name}</span>
+                          </>
+                        )}
+                      </div>
                     </label>
                     <div className="modal-buttons">
                       <button type="submit" disabled={submitting}>
