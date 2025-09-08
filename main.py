@@ -10,7 +10,6 @@ from api import (
     candidate_router,
     interview_router,
     resume_router,
-    static_router,
     vacancy_router,
     webrtc_router,
 )
@@ -69,7 +68,6 @@ app.add_middleware(
 
 
 app.include_router(webrtc_router)
-app.include_router(static_router)
 app.include_router(auth_router)
 app.include_router(candidate_router)
 app.include_router(vacancy_router)

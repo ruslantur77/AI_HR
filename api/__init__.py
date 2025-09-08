@@ -1,7 +1,6 @@
 # flake8: noqa
 
 from .rtc_router import router as webrtc_router
-from .static_router import router as static_router
 from .auth import router as auth_router
 from .resume import router as resume_router
 from .vacancy import router as vacancy_router
