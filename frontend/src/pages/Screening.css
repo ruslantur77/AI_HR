@@ -1,0 +1,110 @@
+  .screening {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 80px);
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+
+  .screening__card {
+    width: 100%;
+    max-width: 600px;
+    background: #6d28d9;
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  }
+
+  .screening__sphere {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #a78bfa, #6d28d9 80%);
+    box-shadow:
+      inset 0 0 20px rgba(255, 255, 255, .25),
+      0 0 40px rgba(167, 139, 250, .6);
+    transition: transform .3s ease;
+  }
+
+  .screening__sphere.active {
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%   { transform: scale(1);    box-shadow: 0 0 40px rgba(167,139,250,.6); }
+    50%  { transform: scale(1.08); box-shadow: 0 0 60px rgba(167,139,250,.9); }
+    100% { transform: scale(1);    box-shadow: 0 0 40px rgba(167,139,250,.6); }
+  }
+
+  .screening__controls {
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .screening__btn {
+    border: none;
+    padding: .85rem 1.8rem;
+    font-size: 1.05rem;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .screening__btn--mic {
+    background: #6b7280;
+    color: #fff;
+  }
+  .screening__btn--mic:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px #5a5e66;
+  }
+
+  .screening__btn--hangup {
+    background: #ef4444;
+    color: #fff;
+  }
+  .screening__btn--hangup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239,68,68,.45);
+  }
+
+  .screening__btn--mic-off { background: #22c55e; color: #fff; }
+  .screening__btn--mic-off:hover { background: #0daa47; }
+
+  p{
+color: #fff;
+  }
+  .mic-select-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.screening__select {
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: none;
+  background: #ede9fe;
+  color: #6d28d9;
+  cursor: pointer;
+}
+
+.screening__btn--refresh {
+  padding: 0.6rem 0.8rem;
+  background: #a78bfa;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
