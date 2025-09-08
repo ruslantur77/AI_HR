@@ -40,7 +40,6 @@ export default function Login() {
 
   return (
     <>
-      <Header />
       <main className="login">
         <form className="login__card" onSubmit={handleSubmit}>
           <h1 className="login__title">Вход для HR</h1>

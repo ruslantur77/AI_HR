@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
-import Header from '../components/Header';
 import './VacancyDetail.css';
 
 export default function VacancyDetail() {
@@ -152,7 +151,6 @@ export default function VacancyDetail() {
 
   return (
     <>
-      <Header />
       <main className="vacancy-detail">
 
 

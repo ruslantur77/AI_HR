@@ -21,7 +21,6 @@ export default function Result() {
 
   return (
     <>
-      <Header />
       <main className="result">
         <div className="result__card">
           <h1 className="result__title">Собеседование окончено</h1>

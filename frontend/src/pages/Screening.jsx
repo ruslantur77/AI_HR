@@ -1,6 +1,5 @@
 // Screening.jsx
 import { useEffect, useRef, useState } from 'react';
-import Header from '../components/Header';
 import { startEchoSession } from '../components/hooks/useInterview';
 import './Screening.css';
 import { useNavigate } from 'react-router-dom';
@@ -139,7 +138,6 @@ const navigate = useNavigate();
   /* ---------- рендер ---------- */
   return (
     <>
-      <Header />
       <main className="screening">
         <div className="screening__card">
           <div className="screening__sphere" id="aiSphere" />

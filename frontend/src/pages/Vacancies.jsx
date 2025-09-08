@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
-import Header from '../components/Header';
 import './Vacancies.css';
 
 export default function Vacancies() {
@@ -51,7 +50,6 @@ export default function Vacancies() {
 
   return (
     <>
-      <Header />
       <main className="vacancies">
         <div className="vacancies__card">
           <h1 className="vacancies__title">Список вакансий</h1>
