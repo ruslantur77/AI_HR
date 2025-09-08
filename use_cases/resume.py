@@ -145,10 +145,12 @@ class EmailSendUseCase:
         self.sender = sender
         self.password = password
 
-    async def _send(self, receiver: str, subject: str, body: str):
+    async def _send(self, receiver: str, subject: str, body: str, html: bool = False):
         msg = MIMEMultipart()
         msg["From"], msg["To"], msg["Subject"] = self.sender, receiver, subject
-        msg.attach(MIMEText(body, "plain"))
+
+        subtype = "html" if html else "plain"
+        msg.attach(MIMEText(body, subtype))
 
         await aiosmtplib.send(
             msg,
@@ -166,9 +168,9 @@ class EmailSendUseCase:
         if not body:
             logger.error("Unexpected AutoScreening status")
             raise ValueError("Unexpected AutoScreening status")
-        body = body.format(link=link or "")
+        body = body.format(link=f'<a href="{link}">{link}</a>' or "")
         try:
-            await self._send(email, self.SUBJECT, body)
+            await self._send(email, self.SUBJECT, body, html=True)
         except Exception as e:
             logger.error("Error on sending letter", exc_info=e)
 
@@ -233,7 +235,7 @@ class ResumeProcessUseCase:
                     welcome_text=welcome_text[1],
                 )
 
-                link = f"{config.HOST}/interview/{interview.id}"
+                link = f"{config.HOST}/?interview_id={interview.id}"
             else:
                 status, link = AutoScreeningStatusEnum.REJECTED, None
 
