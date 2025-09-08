@@ -199,6 +199,7 @@ class AudioProcessor:
                     await self.tts_queue.join()
                 await self.pc.close()
                 pcs.discard(self.pc)
+                await self.close()
                 if task:
                     await task
                 return
@@ -233,6 +234,15 @@ class AudioProcessor:
             except Exception as e:
                 logger.error("Error processing audio frame: %s", e)
                 break
+
+    async def close(self):
+        if self.ws:
+            try:
+                await self.ws.close()
+                logger.info("Gladia connection closed")
+            except Exception as e:
+                logger.error("Error closing Gladia WS: %s", e)
+            self.ws = None
 
 
 def synthesize_tts(
@@ -344,6 +354,7 @@ async def create_peer_connection(
     async def on_connectionstatechange():
         logger.info("Connection state is %s", pc.connectionState)
         if pc.connectionState in ("failed", "closed"):
+            await processor.close()
             await pc.close()
             pcs.discard(pc)
 
