@@ -1,11 +1,13 @@
-import axios from 'axios';
+// src/components/hooks/useInterview.js
+import axios from '../../api/axios';   // ваш инстанс с токеном / baseURL
 
-const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
+export async function startEchoSession(interviewId) {
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  });
 
-export async function startEchoSession() {
-  const pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
   const stream = await navigator.mediaDevices.getUserMedia({
-    audio: {sampleRate: 16000, channelCount: 1, echoCancellation: false}
+    audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false }
   });
   stream.getTracks().forEach(tr => pc.addTrack(tr, stream));
 
@@ -16,7 +18,13 @@ export async function startEchoSession() {
 
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
-  const {data: answer} = await axios.post(`${API_URL}/api/stt/offer`, {sdp: offer.sdp, type: offer.type});
-  await pc.setRemoteDescription(answer);
-  return {pc, stream};
+
+  // новый энд-поинт из OpenAPI
+  const { data } = await axios.post(
+    `/api/interview/rtc/offer/${interviewId}`,
+    { sdp: offer.sdp, type: offer.type }
+  );
+
+  await pc.setRemoteDescription(data);
+  return { pc, stream };
 }

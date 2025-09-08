@@ -1,12 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
-export default function AiButton() {
+export default function AiButton({ interviewId }) {
   const nav = useNavigate();
 
   return (
     <StyledWrapper>
-      <button className="outer-cont" onClick={() => nav('/screening')}>
+      <button
+        className="outer-cont"
+        onClick={() => nav(interviewId ? `/screening/${interviewId}` : '/screening')}
+      >
         <svg viewBox="0 0 24 24" height={24} width={24}>
           {/* ваши path */}
         </svg>

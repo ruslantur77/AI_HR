@@ -17,7 +17,7 @@
   margin-bottom: 2.5rem;
   text-align: center;
   font-weight: 500 ;
-}
+} 
 
 /* 3. Кнопка с анимированным градиентом */
 .home__record-btn {
@@ -39,9 +39,14 @@
   transform: scale(1.05);
 }
 
+
 /* 4. Анимация переливания */
-@keyframes gradient {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.home__finished {
+  text-align: center;
+}
+.home__result {
+  margin-top: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #a78bfa;
 }
