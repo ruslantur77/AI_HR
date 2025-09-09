@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from api import (
@@ -74,4 +73,3 @@ app.include_router(vacancy_router)
 app.include_router(resume_router)
 app.include_router(interview_router)
 app.add_exception_handler(AppException, exception_handler)
-app.mount("/static", StaticFiles(directory="static"), name="static")
