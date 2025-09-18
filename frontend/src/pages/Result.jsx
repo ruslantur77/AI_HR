@@ -25,7 +25,6 @@ export default function Result() {
       .finally(() => setLoading(false));
   }, [interviewId]);
 
-  /* ---------- рендер ---------- */
   if (error)
     return (
       <>

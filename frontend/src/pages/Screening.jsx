@@ -15,7 +15,6 @@ export default function Screening() {
   const remoteAudio = useRef(null);
   const navigate = useNavigate();
 
-  /* ---------- чистильщик ---------- */
   const stopEverything = () => {
     if (pcRef.current) {
       pcRef.current.getSenders().forEach(s => s.track && s.track.stop());
@@ -196,7 +195,6 @@ export default function Screening() {
           <audio ref={remoteAudio} autoPlay style={{ visibility: "hidden" }} />
 
           <div className="screening__controls">
-            {/* выбор микрофона */}
             <div className="mic-select-wrapper">
               <select
                 className="screening__select"
@@ -219,7 +217,6 @@ export default function Screening() {
               </button>
             </div>
 
-            {/* кнопка вкл/выкл мик */}
             <button
               className={`screening__btn ${mic ? 'screening__btn--mic' : 'screening__btn--mic-off'}`}
               onClick={toggleMic}

@@ -71,7 +71,13 @@ export default function Vacancies() {
             <label style={{ color: '#fff', display: 'block', marginBottom: 12 }}>
               Название:
               <input
-                style={{ width: '100%', marginTop: 6, borderRadius:6 }}
+                style={{ width: '100%',
+                   marginTop: 6,
+                  borderRadius:6,
+                  fontSize:14,
+                  fontWeight:500,
+                  padding: '8px 10px'
+                }}
                 value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })}
               />
@@ -80,7 +86,16 @@ export default function Vacancies() {
             <label style={{ color: '#fff', display: 'block', marginBottom: 20 }}>
               Описание:
               <textarea
-                style={{ width: '100%', marginTop: 6, minHeight: 80, borderRadius:6 }}
+                style={{
+                  width: '100%',
+                  marginTop: 6,
+                  fontWeight: 500,
+                  minHeight:100,
+                  borderRadius: 6,
+                  resize: 'none',
+                  fontSize:14,
+                  padding: '8px 10px'
+                }}
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
               />
