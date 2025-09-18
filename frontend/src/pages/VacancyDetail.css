@@ -165,7 +165,8 @@
   width: 50%;
   max-width: 90%;
   animation: slideIn 0.3s;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-subheading);
+  font-weight: 400;
 }
 
 .modal-content h3 {
@@ -223,9 +224,11 @@
   display: block;
   margin-bottom: 24px;
 }
+
 .file-drop input[type="file"] {
-  display: none;                  
+  display: none;
 }
+
 .drop-area {
   border: 2px dashed #a78bfa;
   border-radius: 12px;
@@ -234,24 +237,29 @@
   cursor: pointer;
   transition: background 0.2s ease;
 }
+
 .drop-area:hover {
   background: rgba(167, 139, 250, 0.1);
 }
+
 .upload-icon {
   width: 40px;
   height: 40px;
   fill: #a78bfa;
   margin-bottom: 8px;
 }
+
 .drop-title {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
 }
+
 .drop-hint {
   font-size: 0.85rem;
   opacity: 0.8;
 }
+
 .drop-formats {
   display: block;
   font-size: 0.75rem;
@@ -314,15 +322,17 @@
   font-size: 0.85rem;
   border: none;
   border-radius: 8px;
-  background: #f59e0b; 
+  background: #f59e0b;
   color: #fff;
   cursor: pointer;
   transition: transform 0.2s ease;
 }
+
 .vacancy-detail__btn-ai:disabled {
   background: #6b7280;
   cursor: default;
 }
+
 .vacancy-detail__btn-ai:hover:not(:disabled) {
   transform: translateY(-1px);
 }
@@ -333,7 +343,10 @@
   line-height: 1.4;
   margin: 1rem 0;
   color: #e0e0e0;
+  font-family: var(--font-subheading);
+  font-weight: 400;
 }
+
 .vacancy-detail__btn-ai {
   padding: 0.3rem 0.8rem;
   font-size: 0.85rem;
@@ -344,18 +357,12 @@
   cursor: pointer;
   transition: transform 0.2s ease;
 }
+
 .vacancy-detail__btn-ai:disabled {
   background: #6b7280;
   cursor: default;
 }
+
 .vacancy-detail__btn-ai:hover:not(:disabled) {
   transform: translateY(-1px);
-}
-
-.ai-feedback {
-  white-space: pre-wrap;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  margin: 1rem 0;
-  color: #e0e0e0;
 }

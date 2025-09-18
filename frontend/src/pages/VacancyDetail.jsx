@@ -15,8 +15,8 @@ export default function VacancyDetail() {
   const [showAi, setShowAi] = useState(false); // видимость модалки
 
   const openAiFeedback = (feedback) => {
-  setAiText(feedback || '—');
-  setShowAi(true);
+    setAiText(feedback || '—');
+    setShowAi(true);
   };
 
   const [showForm, setShowForm] = useState(false);
@@ -38,49 +38,7 @@ export default function VacancyDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    const fakeDB = {
-      '1': {
-        id: '1',
-        title: 'Junior Frontend Developer',
-        description: 'Ищем начинающего разработчика с знанием React и базовым опытом TypeScript. Удалёнка, гибкий график.',
-        status: 'open',
-        resumes: [
-          {
-            id: 'r1',
-            auto_screening_status: 'passed',
-            candidate: { full_name: 'Иван Иванов', email: 'ivan@mail.ru' },
-          },
-          {
-            id: 'r2',
-            auto_screening_status: 'pending',
-            candidate: { full_name: 'Анна Петрова', email: 'anna@mail.ru' },
-          },
-        ],
-      },
-      '2': {
-        id: '2',
-        title: 'Middle Backend (FastAPI)',
-        description: 'Опыт коммерческой разработки на Python от 2 лет, знание PostgreSQL, Docker.',
-        status: 'open',
-        resumes: [
-          {
-            id: 'r3',
-            auto_screening_status: 'rejected',
-            candidate: { full_name: 'Сергей Сидоров', email: 'serg@mail.ru' },
-          },
-        ],
-      },
-      '3': {
-        id: '3',
-        title: 'Senior DevOps',
-        description: 'Построение CI/CD, Kubernetes, облачные решения (AWS/GCP).',
-        status: 'closed',
-        resumes: [],
-      },
-    };
-    setTimeout(() => { setVacancy(fakeDB[id] || null); setLoading(false); }, 300);
-  }, [id]);
+
   const downloadResume = async (resume_id) => {
     if (!resume_id) return alert('Файл не загружен');
 
@@ -184,24 +142,24 @@ export default function VacancyDetail() {
                       <span className="vacancy-detail__fio">
                         {r.candidate.full_name} ({r.candidate.email})
                       </span>
-                      
+
                       <div className="vacancy-detail__btns">
-                      <button
-                        className="vacancy-detail__btn-resume"
-                        onClick={() => downloadResume(r.id)}
-                      >
-                        ⬇ Резюме
-                      </button>
-                      <button
-                        className="vacancy-detail__btn-ai"
-                        onClick={() => openAiFeedback(r.interview?.feedback_candidate)}
-                        disabled={!r.interview?.feedback_candidate}
-                        title={!r.interview?.feedback_candidate ? 'Отзыв пока не сформирован' : ''}
-                      >
-                        Итог AI
-                      </button>
-                    </div>
-                      
+                        <button
+                          className="vacancy-detail__btn-resume"
+                          onClick={() => downloadResume(r.id)}
+                        >
+                          ⬇ Резюме
+                        </button>
+                        <button
+                          className="vacancy-detail__btn-ai"
+                          onClick={() => openAiFeedback(r.interview?.feedback_hr)}
+                          disabled={!r.interview?.feedback_candidate}
+                          title={!r.interview?.feedback_candidate ? 'Отзыв пока не сформирован' : ''}
+                        >
+                          Итог AI
+                        </button>
+                      </div>
+
                     </div>
 
                     <div className="vacancy-detail__row">
@@ -302,19 +260,19 @@ export default function VacancyDetail() {
                   </form>
                 </div>
               </div>
-              
+
             )}
             {showAi && (
               <div className="modal-overlay" onClick={() => setShowAi(false)}>
                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                   <h3>Итог AI HR</h3>
                   <pre className="ai-feedback">{aiText}</pre>
-                  <button className="btn-close" onClick={() => setShowAi(false)}>Закрыть</button>
+                  <button className="btn-add-candidate" onClick={() => setShowAi(false)}>Закрыть</button>
                 </div>
               </div>
             )}
           </div>
-          
+
         ) : (
           <p>{error || 'Вакансия не найдена'}</p>
         )}
