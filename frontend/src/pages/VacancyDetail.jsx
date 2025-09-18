@@ -11,8 +11,8 @@ export default function VacancyDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [aiText, setAiText] = useState('');   // текст для модалки
-  const [showAi, setShowAi] = useState(false); // видимость модалки
+  const [aiText, setAiText] = useState('');   
+  const [showAi, setShowAi] = useState(false); 
 
   const openAiFeedback = (feedback) => {
     setAiText(feedback || '—');
@@ -231,7 +231,6 @@ export default function VacancyDetail() {
                           <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2v-2h14v2H5z" />
                         </svg>
 
-                        {/* до выбора */}
                         {!candidateData.file && (
                           <>
                             <span className="drop-title">Перетащите файл сюда</span>
@@ -240,7 +239,6 @@ export default function VacancyDetail() {
                           </>
                         )}
 
-                        {/* после выбора */}
                         {candidateData.file && (
                           <>
                             <span className="drop-title">Файл выбран</span>

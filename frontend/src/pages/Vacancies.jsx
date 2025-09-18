@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from '../api/axios';
 import './Vacancies.css';
 
@@ -7,30 +7,26 @@ export default function Vacancies() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ title: '', description: '' });
 
   useEffect(() => {
     axios
       .get('/api/vacancy/')
       .then(({ data }) => setList(data))
-      .catch(err => {
-        console.error(err);
-        setError('Не удалось загрузить вакансии');
-      })
+      .catch(() => setError('Не удалось загрузить вакансии'))
       .finally(() => setLoading(false));
   }, []);
 
-
-  const createVacancy = async () => {
-    const title = prompt('Название вакансии:');
-    const desc = prompt('Описание:');
-    if (!title || !desc) return;
-
+  const handleCreate = async () => {
+    if (!form.title.trim() || !form.description.trim()) return;
     try {
-      await axios.post('/api/vacancy/', { title, description: desc });
+      await axios.post('/api/vacancy/', form);
       const { data } = await axios.get('/api/vacancy/');
       setList(data);
+      setForm({ title: '', description: '' });
+      setShowModal(false);
     } catch (e) {
       alert('Ошибка при создании: ' + (e.response?.data?.detail?.[0]?.msg || e.message));
     }
@@ -61,11 +57,43 @@ export default function Vacancies() {
             <p>Пока нет вакансий</p>
           )}
 
-          <button className="vacancies__add-btn" onClick={createVacancy}>
+          <button className="vacancies__add-btn" onClick={() => setShowModal(true)}>
             + Новая вакансия
           </button>
         </div>
       </main>
+
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>Новая вакансия</h3>
+
+            <label style={{ color: '#fff', display: 'block', marginBottom: 12 }}>
+              Название:
+              <input
+                style={{ width: '100%', marginTop: 6, borderRadius:6 }}
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+              />
+            </label>
+
+            <label style={{ color: '#fff', display: 'block', marginBottom: 20 }}>
+              Описание:
+              <textarea
+                style={{ width: '100%', marginTop: 6, minHeight: 80, borderRadius:6 }}
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+              />
+            </label>
+
+            <div className="modal-buttons">
+              <button onClick={handleCreate} style={{ background: '#22c55e', color: '#fff' }}>Создать</button>
+              
+              <button onClick={() => setShowModal(false)}>Отмена</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
